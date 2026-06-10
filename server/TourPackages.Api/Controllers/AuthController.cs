@@ -49,7 +49,7 @@ public class AuthController : ControllerBase
     }
 
     // POST /api/auth/forgot-password  — step 1 of the OTP reset.
-    // Emails a 6-digit code (stored in Redis for 5 min). Always returns 200 with
+    // Emails a 6-digit code (stored in-memory for 5 min). Always returns 200 with
     // a generic message so it can't be used to discover registered emails.
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword(RequestPasswordResetDto dto)
