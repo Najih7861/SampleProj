@@ -1,0 +1,198 @@
+/* ============================================================
+   Theme tokens — chosen to fit the nature of the business:
+   a TRAVEL / TOUR brand. Ocean blues + turquoise evoke sky &
+   sea (trust + wanderlust); sunset coral/amber drive CTAs.
+   All colors live here as CSS variables so the theme can be
+   re-skinned later without touching components.
+   ============================================================ */
+:root {
+  --color-primary: #0077b6;       /* Ocean Blue  */
+  --color-primary-dark: #023e8a;  /* Deep Sea    */
+  --color-secondary: #00b4d8;     /* Turquoise   */
+  --color-accent: #ff7e5f;        /* Sunset Coral */
+  --color-accent-dark: #f4623a;
+  --color-warm: #ffb703;          /* Sunny Amber */
+  --color-success: #2a9d8f;       /* Palm Green  */
+  --color-danger: #c1453b;
+  --color-bg: #f8f9fa;            /* Sand / off-white */
+  --color-surface: #ffffff;
+  --color-text: #264653;          /* Slate */
+  --color-muted: #6b7c85;
+  --color-border: #e2e8ee;
+
+  --radius: 14px;
+  --shadow-sm: 0 1px 3px rgba(38, 70, 83, 0.08);
+  --shadow-md: 0 8px 24px rgba(38, 70, 83, 0.12);
+
+  font-family: 'Poppins', 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-bg);
+}
+
+a { color: var(--color-primary); text-decoration: none; }
+a:hover { color: var(--color-primary-dark); }
+
+h1, h2, h3 { color: var(--color-text); margin: 0 0 0.5em; line-height: 1.2; }
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1.3rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background-color 0.15s ease, transform 0.05s ease;
+}
+button:active { transform: translateY(1px); }
+button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-primary { background: var(--color-primary); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--color-primary-dark); }
+
+/* High-contrast CTA — "Book Now" (sunset coral) */
+.btn-cta { background: var(--color-accent); color: #fff; }
+.btn-cta:hover:not(:disabled) { background: var(--color-accent-dark); }
+
+.btn-ghost { background: transparent; color: var(--color-primary); border: 1px solid var(--color-border); }
+.btn-ghost:hover:not(:disabled) { background: #eef6fb; }
+
+.btn-danger { background: var(--color-danger); color: #fff; }
+.btn-sm { padding: 0.35rem 0.85rem; font-size: 0.85rem; }
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 0.95rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.18);
+}
+
+/* ---------- Layout ---------- */
+.container { max-width: 1140px; margin: 0 auto; padding: 0 1.25rem; }
+
+.navbar {
+  background: var(--color-primary-dark);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.navbar .container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+.navbar .brand { font-size: 1.35rem; font-weight: 700; color: #fff; display: flex; gap: 0.5rem; align-items: center; }
+.navbar nav { display: flex; gap: 1.25rem; }
+.navbar nav a { color: #cfe8f5; font-weight: 500; }
+.navbar nav a:hover, .navbar nav a.active { color: #fff; }
+
+.hero-banner {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+  color: #fff;
+  padding: 3rem 0;
+  text-align: center;
+}
+.hero-banner h1 { color: #fff; font-size: 2.4rem; }
+.hero-banner p { color: #e3f4fb; font-size: 1.1rem; margin: 0; }
+
+.page { padding: 2rem 0 3rem; }
+
+/* ---------- Cards / grid ---------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+.card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+.card img { width: 100%; height: 180px; object-fit: cover; background: #dde6ec; }
+.card-body { padding: 1rem 1.1rem 1.2rem; display: flex; flex-direction: column; gap: 0.4rem; flex: 1; }
+.card-body h3 { margin: 0; font-size: 1.15rem; }
+.destination { color: var(--color-muted); font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem; }
+.card-meta { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 0.6rem; }
+.price { color: var(--color-accent-dark); font-weight: 700; font-size: 1.15rem; }
+.duration { background: #eef6fb; color: var(--color-primary-dark); border-radius: 999px; padding: 0.2rem 0.7rem; font-size: 0.8rem; font-weight: 600; }
+
+/* ---------- Filters ---------- */
+.filter-bar {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  background: var(--color-surface);
+  padding: 1rem 1.2rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.5rem;
+}
+.filter-bar .field { display: flex; flex-direction: column; gap: 0.25rem; }
+.filter-bar label { font-size: 0.8rem; font-weight: 600; color: var(--color-muted); }
+.filter-bar .field-grow { flex: 1; min-width: 180px; }
+
+/* ---------- Forms ---------- */
+.form-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 1.5rem;
+}
+.form-row { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 1rem; }
+.form-row label { font-weight: 600; font-size: 0.9rem; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.error-text { color: var(--color-danger); font-size: 0.85rem; }
+.field-error { border-color: var(--color-danger) !important; }
+
+/* ---------- Badges (booking status maps to meaning) ---------- */
+.badge { border-radius: 999px; padding: 0.2rem 0.7rem; font-size: 0.78rem; font-weight: 700; display: inline-block; }
+.badge-pending { background: rgba(255, 183, 3, 0.18); color: #9a6b00; }
+.badge-confirmed { background: rgba(42, 157, 143, 0.18); color: var(--color-success); }
+.badge-cancelled { background: rgba(193, 69, 59, 0.15); color: var(--color-danger); }
+
+/* ---------- Tables ---------- */
+.table-wrap { background: var(--color-surface); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--color-border); font-size: 0.9rem; }
+th { background: #eef6fb; color: var(--color-primary-dark); font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+
+/* ---------- Misc ---------- */
+.detail-hero img { width: 100%; max-height: 360px; object-fit: cover; border-radius: var(--radius); }
+.muted { color: var(--color-muted); }
+.center-msg { text-align: center; color: var(--color-muted); padding: 3rem 0; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; gap: 1rem; flex-wrap: wrap; }
+.notice { padding: 0.8rem 1rem; border-radius: 10px; margin-bottom: 1rem; }
+.notice-success { background: rgba(42, 157, 143, 0.12); color: var(--color-success); }
+.notice-error { background: rgba(193, 69, 59, 0.1); color: var(--color-danger); }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(38, 70, 83, 0.45); display: flex; align-items: center; justify-content: center; padding: 1rem; z-index: 50; }
+.modal { background: var(--color-surface); border-radius: var(--radius); padding: 1.5rem; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
