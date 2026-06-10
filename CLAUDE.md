@@ -57,6 +57,9 @@ Adds a feature with isolation guarantees: first inspects **all other git branche
 ### `/bug-fix <description>` — see `.claude/commands/bug-fix.md`
 Fixes a bug with the least risky change: reviews **all branches and recent history** to understand why the code is the way it is, then makes the **minimal** change to get the build/app green. If an in-place edit would crash another part of the app or cascade into further fixes, it instead adds a **new function or a guarding condition** (in a new file) rather than modifying the fragile code path.
 
+### `/refactor <target + desired outcome>` — see `.claude/commands/refactor.md`
+Refactors existing code. **Gathers complete requirements first and refuses to proceed on incomplete information** (asks the user for target, definition of done, behavior contract, scope boundary, and verification). This is the one workflow where modifying/restructuring existing code is allowed — but it's **bounded**: it alters only what the agreed outcome requires, picks the least-work/least-risk option, preserves all external behavior and dependency contracts unless explicitly authorized, and must not affect any other part of the program.
+
 ## Notes
 
 - The admin area (`/admin/packages`, `/admin/bookings`) has **no authentication** — it's open by design for now.
