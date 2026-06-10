@@ -1,0 +1,41 @@
+# ===== .NET / ASP.NET Core (server) =====
+bin/
+obj/
+*.user
+*.suo
+.vs/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.dll
+*.pdb
+
+# Local app settings / secrets
+appsettings.*.local.json
+secrets.json
+
+# ===== Node / React / Vite (client) =====
+node_modules/
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== Editors / OS =====
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+!.env.example
