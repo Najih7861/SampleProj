@@ -54,6 +54,11 @@ The UI theme uses an ocean-blue + turquoise palette with sunset-coral CTAs — c
         └── index.css            # Theme tokens + global styles
 ```
 
+## Run commands
+Run Backend : cd "D:\Sample project\server\TourPackages.Api"; dotnet run --launch-profile http
+
+
+Run Frontend : npm --prefix "D:\Sample project\client" run dev
 ---
 
 ## 🚀 Getting Started
