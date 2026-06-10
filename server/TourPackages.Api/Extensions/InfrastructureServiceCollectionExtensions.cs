@@ -1,0 +1,29 @@
+using TourPackages.Api.Services;
+
+namespace TourPackages.Api.Extensions;
+
+/// <summary>
+/// Wires the OTP password-reset infrastructure: an in-process cache for codes
+/// (no external dependency) and an email sender chosen from configuration.
+/// Net-new, additive.
+/// </summary>
+public static class InfrastructureServiceCollectionExtensions
+{
+    public static IServiceCollection AddOtpInfrastructure(this IServiceCollection services, IConfiguration config)
+    {
+        // OTP store: framework in-memory cache (codes expire via their TTL). No
+        // external service/install required.
+        services.AddMemoryCache();
+        services.AddScoped<IOtpStore, OtpStore>();
+
+        // Email: real SMTP when a host is configured, otherwise log the message
+        // (dev) so the reset code is visible without a mail server.
+        var smtpHost = config["Smtp:Host"];
+        if (!string.IsNullOrWhiteSpace(smtpHost))
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        else
+            services.AddScoped<IEmailSender, LoggingEmailSender>();
+
+        return services;
+    }
+}
