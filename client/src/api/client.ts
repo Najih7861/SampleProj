@@ -1,4 +1,3 @@
-import axios from 'axios'
 import type {
   Booking,
   BookingInput,
@@ -7,9 +6,9 @@ import type {
   PackageFilters,
   PackageInput,
 } from '../types'
-
-// Calls are proxied to the .NET backend via vite.config.ts (/api -> :5169)
-const api = axios.create({ baseURL: '/api' })
+// Shared axios instance: proxied to the .NET backend (/api -> :5169) and
+// configured with the Bearer-token + 401 interceptors.
+import { http as api } from './http'
 
 // ---- Packages ----
 export async function getPackages(filters: PackageFilters = {}): Promise<Package[]> {
@@ -49,6 +48,12 @@ export async function getBookings(status?: BookingStatus): Promise<Booking[]> {
   const { data } = await api.get<Booking[]>('/bookings', {
     params: status ? { status } : {},
   })
+  return data
+}
+
+// The signed-in user's own bookings (server filters by the JWT user id).
+export async function getMyBookings(): Promise<Booking[]> {
+  const { data } = await api.get<Booking[]>('/bookings/mine')
   return data
 }
 

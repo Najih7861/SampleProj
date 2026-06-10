@@ -13,7 +13,8 @@ public record BookingDto(
     DateTime TravelDate,
     int NumberOfTravelers,
     BookingStatus Status,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string PackageDestination);
 
 public class CreateBookingDto
 {

@@ -32,4 +32,10 @@ public class Booking
     public BookingStatus Status { get; set; } = BookingStatus.Pending;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // The signed-in user who made this booking. Nullable so legacy/guest rows
+    // (created before login-to-book) stay valid. Set server-side from the JWT.
+    public int? UserId { get; set; }
+
+    public User? User { get; set; }
 }

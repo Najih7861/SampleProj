@@ -29,5 +29,11 @@ public class TourPackage
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Optional link to the Place this package belongs to (additive; nullable so
+    // existing packages remain valid). See Place / PlaceImage.
+    public int? PlaceId { get; set; }
+
+    public Place? Place { get; set; }
+
     public List<Booking> Bookings { get; set; } = new();
 }

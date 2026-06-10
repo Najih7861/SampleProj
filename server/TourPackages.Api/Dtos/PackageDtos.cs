@@ -11,7 +11,8 @@ public record PackageDto(
     int DurationDays,
     string? ImageUrl,
     bool IsAvailable,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    int? PlaceId);
 
 public class CreatePackageDto
 {
@@ -33,6 +34,9 @@ public class CreatePackageDto
     public string? ImageUrl { get; set; }
 
     public bool IsAvailable { get; set; } = true;
+
+    // Optional grouping under a Place.
+    public int? PlaceId { get; set; }
 }
 
 public class UpdatePackageDto : CreatePackageDto { }

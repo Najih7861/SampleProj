@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import type { Package, PackageInput } from '../types'
+import { useEffect, useState } from 'react'
+import { getPlaces } from '../api/places'
+import { uploadImage } from '../api/uploads'
+import type { Package, PackageInput, Place } from '../types'
 
 interface Props {
   initial?: Package
@@ -15,8 +17,30 @@ export default function PackageForm({ initial, onSubmit, onCancel }: Props) {
   const [durationDays, setDurationDays] = useState(initial?.durationDays ?? 1)
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? '')
   const [isAvailable, setIsAvailable] = useState(initial?.isAvailable ?? true)
+  const [placeId, setPlaceId] = useState<string>(initial?.placeId != null ? String(initial.placeId) : '')
+  const [places, setPlaces] = useState<Place[]>([])
+  const [uploading, setUploading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getPlaces().then(setPlaces).catch(() => setPlaces([]))
+  }, [])
+
+  async function handleCover(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setError(null)
+    setUploading(true)
+    try {
+      setImageUrl(await uploadImage(file))
+    } catch {
+      setError('Could not upload the cover image.')
+    } finally {
+      setUploading(false)
+      e.target.value = ''
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -26,6 +50,7 @@ export default function PackageForm({ initial, onSubmit, onCancel }: Props) {
       await onSubmit({
         title, destination, description, price, durationDays,
         imageUrl: imageUrl || null, isAvailable,
+        placeId: placeId ? Number(placeId) : null,
       })
     } catch {
       setError('Could not save the package. Please try again.')
@@ -63,9 +88,25 @@ export default function PackageForm({ initial, onSubmit, onCancel }: Props) {
         </div>
       </div>
       <div className="form-row">
-        <label htmlFor="img">Image URL (optional)</label>
+        <label htmlFor="place">Place</label>
+        <select id="place" value={placeId} onChange={(e) => setPlaceId(e.target.value)}>
+          <option value="">— None —</option>
+          {places.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </div>
+      <div className="form-row">
+        <label htmlFor="img">Cover image</label>
         <input id="img" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)}
-          placeholder="https://…" />
+          placeholder="https://… or upload a photo" />
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
+          <label className="btn-ghost btn-sm" style={{ cursor: 'pointer' }}>
+            {uploading ? 'Uploading…' : '+ Upload photo'}
+            <input type="file" accept="image/*" hidden onChange={handleCover} disabled={uploading} />
+          </label>
+          {imageUrl && <img src={imageUrl} alt="cover preview" className="cover-preview" />}
+        </div>
       </div>
       <div className="form-row" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.5rem' }}>
         <input id="avail" type="checkbox" style={{ width: 'auto' }} checked={isAvailable}
@@ -75,7 +116,7 @@ export default function PackageForm({ initial, onSubmit, onCancel }: Props) {
 
       <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
         <button type="button" className="btn-ghost" onClick={onCancel} disabled={saving}>Cancel</button>
-        <button type="submit" className="btn-primary" disabled={saving}>
+        <button type="submit" className="btn-primary" disabled={saving || uploading}>
           {saving ? 'Saving…' : 'Save'}
         </button>
       </div>

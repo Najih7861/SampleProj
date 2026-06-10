@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { createBooking } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import type { Booking } from '../types'
 
 interface Props {
@@ -8,8 +9,9 @@ interface Props {
 }
 
 export default function BookingForm({ packageId, onBooked }: Props) {
-  const [customerName, setCustomerName] = useState('')
-  const [email, setEmail] = useState('')
+  const { user } = useAuth()
+  const [customerName, setCustomerName] = useState(user?.username ?? '')
+  const [email, setEmail] = useState(user?.email ?? '')
   const [phone, setPhone] = useState('')
   const [travelDate, setTravelDate] = useState('')
   const [numberOfTravelers, setNumberOfTravelers] = useState(1)

@@ -12,6 +12,11 @@ export default defineConfig({
         target: 'http://localhost:5169',
         changeOrigin: true,
       },
+      // Uploaded images are served as static files from the backend.
+      '/uploads': {
+        target: 'http://localhost:5169',
+        changeOrigin: true,
+      },
     },
   },
 })
