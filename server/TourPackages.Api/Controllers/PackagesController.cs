@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TourPackages.Api.Data;
@@ -16,7 +17,7 @@ public class PackagesController : ControllerBase
 
     private static PackageDto ToDto(TourPackage p) => new(
         p.Id, p.Title, p.Destination, p.Description, p.Price,
-        p.DurationDays, p.ImageUrl, p.IsAvailable, p.CreatedAt);
+        p.DurationDays, p.ImageUrl, p.IsAvailable, p.CreatedAt, p.PlaceId);
 
     // GET /api/packages?destination=&minPrice=&maxPrice=
     [HttpGet]
@@ -50,8 +51,9 @@ public class PackagesController : ControllerBase
         return p is null ? NotFound() : Ok(ToDto(p));
     }
 
-    // POST /api/packages
+    // POST /api/packages  (admin only)
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<PackageDto>> Create(CreatePackageDto dto)
     {
         var p = new TourPackage
@@ -63,6 +65,7 @@ public class PackagesController : ControllerBase
             DurationDays = dto.DurationDays,
             ImageUrl = dto.ImageUrl,
             IsAvailable = dto.IsAvailable,
+            PlaceId = dto.PlaceId,
             CreatedAt = DateTime.UtcNow
         };
         _db.TourPackages.Add(p);
@@ -70,8 +73,9 @@ public class PackagesController : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = p.Id }, ToDto(p));
     }
 
-    // PUT /api/packages/{id}
+    // PUT /api/packages/{id}  (admin only)
     [HttpPut("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, UpdatePackageDto dto)
     {
         var p = await _db.TourPackages.FindAsync(id);
@@ -84,13 +88,15 @@ public class PackagesController : ControllerBase
         p.DurationDays = dto.DurationDays;
         p.ImageUrl = dto.ImageUrl;
         p.IsAvailable = dto.IsAvailable;
+        p.PlaceId = dto.PlaceId;
 
         await _db.SaveChangesAsync();
         return NoContent();
     }
 
-    // DELETE /api/packages/{id}
+    // DELETE /api/packages/{id}  (admin only)
     [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
         var p = await _db.TourPackages.FindAsync(id);

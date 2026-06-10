@@ -1,5 +1,9 @@
+using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using TourPackages.Api.Auth;
 using TourPackages.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,6 +13,25 @@ const string ClientCors = "ClientCors";
 // Database (PostgreSQL via EF Core)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// JWT bearer authentication + role-based authorization.
+builder.Services.AddScoped<JwtTokenService>();
+var jwt = builder.Configuration.GetSection("Jwt");
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwt["Issuer"],
+            ValidAudience = jwt["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt["Key"]!)),
+        };
+    });
+builder.Services.AddAuthorization();
 
 // Controllers + serialize enums as strings (e.g. "Pending")
 builder.Services.AddControllers()
@@ -43,7 +66,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+// Serve uploaded images from wwwroot (e.g. /uploads/{guid}.jpg).
+app.UseStaticFiles();
 app.UseCors(ClientCors);
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

@@ -10,6 +10,8 @@ export default function Navbar() {
     navigate('/')
   }
 
+  const isAdmin = user?.role === 'Admin'
+
   return (
     <header className="navbar">
       <div className="container">
@@ -17,9 +19,20 @@ export default function Navbar() {
           <span aria-hidden>🌍</span> Wanderlust Tours
         </NavLink>
         <nav>
-          <NavLink to="/" end>Explore</NavLink>
-          <NavLink to="/admin/packages">Manage Packages</NavLink>
-          <NavLink to="/admin/bookings">Bookings</NavLink>
+          {isAdmin ? (
+            <>
+              <NavLink to="/admin/places">Manage Places</NavLink>
+              <NavLink to="/admin/packages">Manage Packages</NavLink>
+              <NavLink to="/admin/bookings">View Bookings</NavLink>
+            </>
+          ) : (
+            <>
+              <NavLink to="/" end>Home</NavLink>
+              <NavLink to="/explore">Book Now</NavLink>
+              {user && <NavLink to="/my-bookings">My Bookings</NavLink>}
+            </>
+          )}
+
           {user ? (
             <span className="nav-user">
               <span className="nav-greeting">Hi, {user.username}</span>

@@ -15,7 +15,8 @@ export default function AuthPage() {
 
   function handleAuthSuccess(user: AuthUser) {
     login(user)
-    navigate('/')
+    // Admins land on their management area; users on the places Home.
+    navigate(user.role === 'Admin' ? '/admin/bookings' : '/')
   }
 
   return (

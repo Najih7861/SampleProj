@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TourPackages.Api.Auth;
 using TourPackages.Api.Data;
 using TourPackages.Api.Dtos;
 using TourPackages.Api.Models;
@@ -12,11 +13,16 @@ namespace TourPackages.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly JwtTokenService _tokens;
     private static readonly PasswordHasher<User> Hasher = new();
 
-    public AuthController(AppDbContext db) => _db = db;
+    public AuthController(AppDbContext db, JwtTokenService tokens)
+    {
+        _db = db;
+        _tokens = tokens;
+    }
 
-    private static AuthUserDto ToDto(User u) => new(u.Id, u.Username, u.Email, u.Role);
+    private AuthUserDto ToDto(User u) => new(u.Id, u.Username, u.Email, u.Role, _tokens.CreateToken(u));
 
     // POST /api/auth/register — every self-service registration is a User role.
     [HttpPost("register")]

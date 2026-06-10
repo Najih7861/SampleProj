@@ -11,6 +11,8 @@ export interface AuthUser {
   username: string
   email: string
   role: UserRole
+  // Signed JWT attached as a Bearer token on subsequent API calls.
+  token: string
 }
 
 export interface RegisterInput {

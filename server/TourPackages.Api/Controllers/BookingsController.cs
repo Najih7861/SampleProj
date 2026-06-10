@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TourPackages.Api.Data;
@@ -17,10 +19,20 @@ public class BookingsController : ControllerBase
     private static BookingDto ToDto(Booking b) => new(
         b.Id, b.TourPackageId, b.TourPackage?.Title ?? string.Empty,
         b.CustomerName, b.Email, b.Phone, b.TravelDate,
-        b.NumberOfTravelers, b.Status, b.CreatedAt);
+        b.NumberOfTravelers, b.Status, b.CreatedAt,
+        b.TourPackage?.Destination ?? string.Empty);
 
-    // POST /api/bookings  (visitor creates an inquiry/booking)
+    // Reads the user id from the JWT "sub"/NameIdentifier claim.
+    private int? CurrentUserId()
+    {
+        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                  ?? User.FindFirstValue("sub");
+        return int.TryParse(raw, out var id) ? id : null;
+    }
+
+    // POST /api/bookings  (signed-in user creates a booking — login required)
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<BookingDto>> Create(CreateBookingDto dto)
     {
         var package = await _db.TourPackages.FindAsync(dto.TourPackageId);
@@ -38,6 +50,7 @@ public class BookingsController : ControllerBase
             TravelDate = DateTime.SpecifyKind(dto.TravelDate, DateTimeKind.Utc),
             NumberOfTravelers = dto.NumberOfTravelers,
             Status = BookingStatus.Pending,
+            UserId = CurrentUserId(),
             CreatedAt = DateTime.UtcNow
         };
 
@@ -50,14 +63,34 @@ public class BookingsController : ControllerBase
 
     // GET /api/bookings/{id}
     [HttpGet("{id:int}")]
+    [Authorize]
     public async Task<ActionResult<BookingDto>> GetById(int id)
     {
         var b = await _db.Bookings.Include(x => x.TourPackage).FirstOrDefaultAsync(x => x.Id == id);
         return b is null ? NotFound() : Ok(ToDto(b));
     }
 
-    // GET /api/bookings?status=  (admin)
+    // GET /api/bookings/mine  (the signed-in user's own bookings)
+    [HttpGet("mine")]
+    [Authorize]
+    public async Task<ActionResult<IEnumerable<BookingDto>>> GetMine()
+    {
+        var userId = CurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var items = await _db.Bookings
+            .Include(b => b.TourPackage)
+            .Where(b => b.UserId == userId)
+            .OrderByDescending(b => b.CreatedAt)
+            .Select(b => ToDto(b))
+            .ToListAsync();
+
+        return Ok(items);
+    }
+
+    // GET /api/bookings?status=  (admin: all bookings)
     [HttpGet]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<IEnumerable<BookingDto>>> GetAll([FromQuery] BookingStatus? status)
     {
         var query = _db.Bookings.Include(b => b.TourPackage).AsQueryable();
@@ -74,6 +107,7 @@ public class BookingsController : ControllerBase
 
     // PUT /api/bookings/{id}/status  (admin)
     [HttpPut("{id:int}/status")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateStatus(int id, UpdateBookingStatusDto dto)
     {
         var b = await _db.Bookings.FindAsync(id);

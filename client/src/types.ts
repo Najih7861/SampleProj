@@ -10,6 +10,7 @@ export interface Package {
   imageUrl?: string | null
   isAvailable: boolean
   createdAt: string
+  placeId?: number | null
 }
 
 export interface Booking {
@@ -23,6 +24,7 @@ export interface Booking {
   numberOfTravelers: number
   status: BookingStatus
   createdAt: string
+  packageDestination: string
 }
 
 export interface PackageInput {
@@ -33,6 +35,32 @@ export interface PackageInput {
   durationDays: number
   imageUrl?: string | null
   isAvailable: boolean
+  placeId?: number | null
+}
+
+// A package summary shown on the Home place cards ("Book Now").
+export interface PlacePackage {
+  id: number
+  title: string
+  price: number
+  durationDays: number
+  isAvailable: boolean
+}
+
+// A destination/place with its gallery (ordered image URLs) and grouped packages.
+export interface Place {
+  id: number
+  name: string
+  description: string
+  createdAt: string
+  images: string[]
+  packages: PlacePackage[]
+}
+
+export interface PlaceInput {
+  name: string
+  description: string
+  imageUrls: string[]
 }
 
 export interface BookingInput {

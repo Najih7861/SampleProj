@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getPackage } from '../api/client'
+import { useAuth } from '../auth/AuthContext'
 import BookingForm from '../components/BookingForm'
 import type { Package } from '../types'
 
@@ -9,6 +10,7 @@ const FALLBACK_IMG =
 
 export default function PackageDetails() {
   const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
   const [pkg, setPkg] = useState<Package | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -64,6 +66,14 @@ export default function PackageDetails() {
                   the details shortly.
                 </p>
                 <button className="btn-ghost" onClick={() => setBooked(false)}>Book again</button>
+              </div>
+            ) : !user ? (
+              <div className="form-card">
+                <h3>Log in to book</h3>
+                <p className="muted">
+                  You need an account to book <strong>{pkg.title}</strong>.
+                </p>
+                <Link to="/auth" className="btn-cta">Log in or register</Link>
               </div>
             ) : pkg.isAvailable ? (
               <BookingForm packageId={pkg.id} onBooked={() => setBooked(true)} />

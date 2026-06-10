@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { getPackages } from '../api/client'
 import PackageCard from '../components/PackageCard'
 import type { Package } from '../types'
 
 export default function Home() {
+  const [searchParams] = useSearchParams()
+  const placeId = searchParams.get('placeId')
+
   const [packages, setPackages] = useState<Package[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,6 +51,12 @@ export default function Home() {
     setTimeout(load, 0)
   }
 
+  // When arriving via a place's "Book Now", narrow the list to that place.
+  const visible = placeId
+    ? packages.filter((p) => String(p.placeId) === placeId)
+    : packages
+  const placeName = placeId ? visible[0]?.destination : undefined
+
   return (
     <>
       <section className="hero-banner">
@@ -78,14 +88,18 @@ export default function Home() {
             <button type="button" className="btn-ghost" onClick={clearFilters}>Clear</button>
           </form>
 
+          {placeId && placeName && (
+            <div className="notice">Showing tours in <strong>{placeName}</strong>.</div>
+          )}
+
           {loading && <p className="center-msg">Loading tours…</p>}
           {error && <div className="notice notice-error">{error}</div>}
-          {!loading && !error && packages.length === 0 && (
+          {!loading && !error && visible.length === 0 && (
             <p className="center-msg">No tours match your search. Try clearing the filters.</p>
           )}
 
           <div className="grid">
-            {packages.map((pkg) => (
+            {visible.map((pkg) => (
               <PackageCard key={pkg.id} pkg={pkg} />
             ))}
           </div>

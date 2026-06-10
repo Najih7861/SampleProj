@@ -33,6 +33,6 @@ public class ForgotPasswordDto
     public string NewPassword { get; set; } = string.Empty;
 }
 
-// Returned on successful register/login. No JWT yet — kept minimal and
-// extensible (a token field can be added later without breaking callers).
-public record AuthUserDto(int Id, string Username, string Email, UserRole Role);
+// Returned on successful register/login. Carries the signed JWT the client
+// attaches as a Bearer token on subsequent requests.
+public record AuthUserDto(int Id, string Username, string Email, UserRole Role, string Token);

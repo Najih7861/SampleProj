@@ -14,6 +14,10 @@ artifacts/
 appsettings.*.local.json
 secrets.json
 
+# Uploaded images (keep the folder, ignore its contents)
+server/TourPackages.Api/wwwroot/uploads/*
+!server/TourPackages.Api/wwwroot/uploads/.gitkeep
+
 # ===== Node / React / Vite (client) =====
 node_modules/
 dist/

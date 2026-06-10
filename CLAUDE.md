@@ -62,5 +62,5 @@ Refactors existing code. **Gathers complete requirements first and refuses to pr
 
 ## Notes
 
-- The admin area (`/admin/packages`, `/admin/bookings`) has **no authentication** — it's open by design for now.
+- The admin area (`/admin/places`, `/admin/packages`, `/admin/bookings`) is **protected by role-based auth**. Login issues a JWT (see `Auth/JwtTokenService.cs`); the client attaches it as a Bearer token (`client/src/api/http.ts`) and gates routes with `RequireAuth`/`RequireAdmin`. Admin-only endpoints use `[Authorize(Roles = "Admin")]`; booking creation requires any signed-in user. Public browsing of places/packages stays open. Uploaded photos are saved to `wwwroot/uploads` and served as static files (proxied via `/uploads` in dev).
 - DB password sits in `appsettings.json` for local dev only; the connection string under `ConnectionStrings:DefaultConnection` must point at a running PostgreSQL instance before migrations or the API will work.
