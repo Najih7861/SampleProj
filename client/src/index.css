@@ -86,7 +86,8 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ---------- Layout ---------- */
-.container { max-width: 1140px; margin: 0 auto; padding: 0 1.25rem; }
+/* Full-width layout with minimal side gutters (no centered max-width cap) */
+.container { max-width: 100%; margin: 0 auto; padding: 0 1rem; }
 
 .navbar {
   background: var(--color-primary-dark);
