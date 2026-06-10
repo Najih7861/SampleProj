@@ -1,25 +1,32 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using TourPackages.Api.Auth;
+using TourPackages.Api.Common.Results;
 using TourPackages.Api.Data;
 using TourPackages.Api.Dtos;
+using TourPackages.Api.Extensions;
 using TourPackages.Api.Models;
+using TourPackages.Api.Services;
 
 namespace TourPackages.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting(RateLimitingPolicies.Auth)]
 public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly JwtTokenService _tokens;
+    private readonly IAuthService _auth;
     private static readonly PasswordHasher<User> Hasher = new();
 
-    public AuthController(AppDbContext db, JwtTokenService tokens)
+    public AuthController(AppDbContext db, JwtTokenService tokens, IAuthService auth)
     {
         _db = db;
         _tokens = tokens;
+        _auth = auth;
     }
 
     private AuthUserDto ToDto(User u) => new(u.Id, u.Username, u.Email, u.Role, _tokens.CreateToken(u));
@@ -28,56 +35,36 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<ActionResult<AuthUserDto>> Register(RegisterDto dto)
     {
-        var username = dto.Username.Trim();
-        var email = dto.Email.Trim();
-
-        if (await _db.Users.AnyAsync(u => u.Username == username))
-            return Conflict("That username is already taken.");
-        if (await _db.Users.AnyAsync(u => u.Email == email))
-            return Conflict("An account with that email already exists.");
-
-        var user = new User
-        {
-            Username = username,
-            Email = email,
-            Role = UserRole.User, // app registrations are always plain users
-            CreatedAt = DateTime.UtcNow
-        };
-        user.PasswordHash = Hasher.HashPassword(user, dto.Password);
-
-        _db.Users.Add(user);
-        await _db.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(Register), ToDto(user));
+        var result = await _auth.RegisterAsync(dto);
+        if (!result.IsSuccess) return result.ToErrorResult(this);
+        return CreatedAtAction(nameof(Register), result.Value);
     }
 
     // POST /api/auth/login
     [HttpPost("login")]
     public async Task<ActionResult<AuthUserDto>> Login(LoginDto dto)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == dto.Username.Trim());
-        if (user is null)
-            return Unauthorized("Invalid username or password.");
-
-        var result = Hasher.VerifyHashedPassword(user, user.PasswordHash, dto.Password);
-        if (result == PasswordVerificationResult.Failed)
-            return Unauthorized("Invalid username or password.");
-
-        return Ok(ToDto(user));
+        var result = await _auth.LoginAsync(dto);
+        return result.IsSuccess ? Ok(result.Value) : result.ToErrorResult(this);
     }
 
-    // POST /api/auth/forgot-password
-    // Simplified demo flow: resets the password directly for a known username.
-    // (A production flow would email a time-limited reset token instead.)
+    // POST /api/auth/forgot-password  — step 1 of the OTP reset.
+    // Emails a 6-digit code (stored in Redis for 5 min). Always returns 200 with
+    // a generic message so it can't be used to discover registered emails.
     [HttpPost("forgot-password")]
-    public async Task<IActionResult> ForgotPassword(ForgotPasswordDto dto)
+    public async Task<IActionResult> ForgotPassword(RequestPasswordResetDto dto)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == dto.Username.Trim());
-        if (user is null)
-            return NotFound("No account found with that username.");
+        await _auth.RequestPasswordResetAsync(dto);
+        return Ok(new { message = "If an account with that email exists, a reset code has been sent." });
+    }
 
-        user.PasswordHash = Hasher.HashPassword(user, dto.NewPassword);
-        await _db.SaveChangesAsync();
+    // POST /api/auth/reset-password  — step 2 of the OTP reset.
+    // Validates the emailed code and sets the new password.
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordDto dto)
+    {
+        var result = await _auth.ResetPasswordAsync(dto);
+        if (!result.IsSuccess) return result.ToErrorResult(this);
         return Ok(new { message = "Password updated. You can now log in with your new password." });
     }
 }
