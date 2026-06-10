@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
 
     public DbSet<TourPackage> TourPackages => Set<TourPackage>();
     public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<User> Users => Set<User>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -26,6 +27,14 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Booking>(e =>
         {
             e.Property(b => b.Status).HasConversion<int>();
+        });
+
+        modelBuilder.Entity<User>(e =>
+        {
+            // Same convention as BookingStatus: string on the wire, int in the DB.
+            e.Property(u => u.Role).HasConversion<int>();
+            e.HasIndex(u => u.Username).IsUnique();
+            e.HasIndex(u => u.Email).IsUnique();
         });
 
         // Deterministic seed data (fixed timestamps so migrations are stable).

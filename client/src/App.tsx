@@ -4,6 +4,7 @@ import Home from './pages/Home'
 import PackageDetails from './pages/PackageDetails'
 import AdminPackages from './pages/AdminPackages'
 import AdminBookings from './pages/AdminBookings'
+import AuthPage from './pages/AuthPage'
 
 export default function App() {
   return (
@@ -13,6 +14,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/packages/:id" element={<PackageDetails />} />
+          <Route path="/auth" element={<AuthPage />} />
           <Route path="/admin/packages" element={<AdminPackages />} />
           <Route path="/admin/bookings" element={<AdminBookings />} />
           <Route path="*" element={

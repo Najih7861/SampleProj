@@ -29,6 +29,13 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Seed the default admin user (idempotent).
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    await TourPackages.Api.Data.DbInitializer.SeedAdminAsync(db);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
