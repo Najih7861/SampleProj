@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import type { AuthUser } from '../api/auth'
 import LoginForm from '../components/auth/LoginForm'
 import RegisterForm from '../components/auth/RegisterForm'
-import ForgotPasswordForm from '../components/auth/ForgotPasswordForm'
+import ForgotPasswordOtpForm from '../components/auth/ForgotPasswordOtpForm'
 
 type View = 'login' | 'register' | 'forgot'
 
@@ -55,7 +55,7 @@ export default function AuthPage() {
               />
             )}
             {view === 'forgot' && (
-              <ForgotPasswordForm onBackToLogin={() => setView('login')} />
+              <ForgotPasswordOtpForm onBackToLogin={() => setView('login')} />
             )}
           </div>
         </div>

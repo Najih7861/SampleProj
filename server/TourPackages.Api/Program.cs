@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TourPackages.Api.Auth;
 using TourPackages.Api.Data;
+using TourPackages.Api.PasswordResetOtp;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +37,9 @@ builder.Services.AddAuthorization();
 // Controllers + serialize enums as strings (e.g. "Pending")
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+// Forgot-password via email OTP (in-memory code store + SMTP/log email sender).
+builder.Services.AddPasswordResetOtp(builder.Configuration);
 
 // Swagger / OpenAPI UI for manual testing
 builder.Services.AddEndpointsApiExplorer();
