@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TourPackages.Api.Common.Pagination;
+using TourPackages.Api.Common.Results;
 using TourPackages.Api.Data;
 using TourPackages.Api.Dtos;
 using TourPackages.Api.Models;
+using TourPackages.Api.Services;
 
 namespace TourPackages.Api.Controllers;
 
@@ -12,8 +15,13 @@ namespace TourPackages.Api.Controllers;
 public class PlacesController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IPlaceService _places;
 
-    public PlacesController(AppDbContext db) => _db = db;
+    public PlacesController(AppDbContext db, IPlaceService places)
+    {
+        _db = db;
+        _places = places;
+    }
 
     private static PlaceDto ToDto(Place p) => new(
         p.Id,
@@ -26,29 +34,31 @@ public class PlacesController : ControllerBase
             .Select(pk => new PlacePackageDto(pk.Id, pk.Title, pk.Price, pk.DurationDays, pk.IsAvailable))
             .ToList());
 
-    // GET /api/places  (public — drives the user Home showcase)
+    // GET /api/places?page=&pageSize=  (public — drives the user Home showcase)
+    // Pagination is opt-in: omit page/pageSize to get the full list (unchanged).
+    // The total matching count is always returned in the X-Total-Count header.
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<PlaceDto>>> GetAll()
+    public async Task<ActionResult<IEnumerable<PlaceDto>>> GetAll([FromQuery] int? page, [FromQuery] int? pageSize)
     {
-        var places = await _db.Places
-            .Include(p => p.Images)
-            .Include(p => p.Packages)
-            .OrderBy(p => p.Id)
-            .ToListAsync();
+        var paging = PageRequest.FromQuery(page, pageSize);
+        if (paging is null)
+        {
+            var all = await _places.GetAllAsync();
+            Response.Headers[PageRequest.TotalCountHeader] = all.Count.ToString();
+            return Ok(all);
+        }
 
-        return Ok(places.Select(ToDto));
+        var result = await _places.GetPagedAsync(paging);
+        Response.Headers[PageRequest.TotalCountHeader] = result.Total.ToString();
+        return Ok(result.Items);
     }
 
     // GET /api/places/{id}  (public)
     [HttpGet("{id:int}")]
     public async Task<ActionResult<PlaceDto>> GetById(int id)
     {
-        var place = await _db.Places
-            .Include(p => p.Images)
-            .Include(p => p.Packages)
-            .FirstOrDefaultAsync(p => p.Id == id);
-
-        return place is null ? NotFound() : Ok(ToDto(place));
+        var place = await _places.GetByIdAsync(id);
+        return place is null ? NotFound() : Ok(place);
     }
 
     // POST /api/places  (admin)
@@ -56,17 +66,8 @@ public class PlacesController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<ActionResult<PlaceDto>> Create(CreatePlaceDto dto)
     {
-        var place = new Place
-        {
-            Name = dto.Name,
-            Description = dto.Description,
-            CreatedAt = DateTime.UtcNow,
-            Images = BuildImages(dto.ImageUrls)
-        };
-
-        _db.Places.Add(place);
-        await _db.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetById), new { id = place.Id }, ToDto(place));
+        var place = await _places.CreateAsync(dto);
+        return CreatedAtAction(nameof(GetById), new { id = place.Id }, place);
     }
 
     // PUT /api/places/{id}  (admin) — replaces the gallery from ImageUrls
@@ -74,18 +75,8 @@ public class PlacesController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, UpdatePlaceDto dto)
     {
-        var place = await _db.Places.Include(p => p.Images).FirstOrDefaultAsync(p => p.Id == id);
-        if (place is null) return NotFound();
-
-        place.Name = dto.Name;
-        place.Description = dto.Description;
-
-        // Sync the gallery: drop the old rows, add the new ordered set.
-        _db.PlaceImages.RemoveRange(place.Images);
-        place.Images = BuildImages(dto.ImageUrls);
-
-        await _db.SaveChangesAsync();
-        return NoContent();
+        var result = await _places.UpdateAsync(id, dto);
+        return result.IsSuccess ? NoContent() : result.ToErrorResult(this);
     }
 
     // DELETE /api/places/{id}  (admin) — images cascade; packages keep PlaceId=null
@@ -93,12 +84,8 @@ public class PlacesController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
-        var place = await _db.Places.FindAsync(id);
-        if (place is null) return NotFound();
-
-        _db.Places.Remove(place);
-        await _db.SaveChangesAsync();
-        return NoContent();
+        var result = await _places.DeleteAsync(id);
+        return result.IsSuccess ? NoContent() : result.ToErrorResult(this);
     }
 
     private static List<PlaceImage> BuildImages(IEnumerable<string> urls) =>

@@ -20,6 +20,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<TourPackage>(e =>
         {
             e.Property(p => p.Price).HasColumnType("numeric(10,2)");
+            // Supports the destination filter on GET /api/packages.
+            e.HasIndex(p => p.Destination);
             e.HasMany(p => p.Bookings)
                 .WithOne(b => b.TourPackage)
                 .HasForeignKey(b => b.TourPackageId)
@@ -35,6 +37,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Booking>(e =>
         {
             e.Property(b => b.Status).HasConversion<int>();
+            // Supports the status filter on GET /api/bookings.
+            e.HasIndex(b => b.Status);
             // Bookings are owned by a user once login-to-book is in effect.
             // Deleting a user leaves their bookings intact (UserId -> null).
             e.HasOne(b => b.User)

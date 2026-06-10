@@ -2,9 +2,12 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using TourPackages.Api.Common.Pagination;
+using TourPackages.Api.Common.Results;
 using TourPackages.Api.Data;
 using TourPackages.Api.Dtos;
 using TourPackages.Api.Models;
+using TourPackages.Api.Services;
 
 namespace TourPackages.Api.Controllers;
 
@@ -13,8 +16,13 @@ namespace TourPackages.Api.Controllers;
 public class BookingsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly IBookingService _bookings;
 
-    public BookingsController(AppDbContext db) => _db = db;
+    public BookingsController(AppDbContext db, IBookingService bookings)
+    {
+        _db = db;
+        _bookings = bookings;
+    }
 
     private static BookingDto ToDto(Booking b) => new(
         b.Id, b.TourPackageId, b.TourPackage?.Title ?? string.Empty,
@@ -35,30 +43,9 @@ public class BookingsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<BookingDto>> Create(CreateBookingDto dto)
     {
-        var package = await _db.TourPackages.FindAsync(dto.TourPackageId);
-        if (package is null)
-            return BadRequest($"Tour package {dto.TourPackageId} does not exist.");
-        if (!package.IsAvailable)
-            return BadRequest("This tour package is not currently available for booking.");
-
-        var booking = new Booking
-        {
-            TourPackageId = dto.TourPackageId,
-            CustomerName = dto.CustomerName,
-            Email = dto.Email,
-            Phone = dto.Phone,
-            TravelDate = DateTime.SpecifyKind(dto.TravelDate, DateTimeKind.Utc),
-            NumberOfTravelers = dto.NumberOfTravelers,
-            Status = BookingStatus.Pending,
-            UserId = CurrentUserId(),
-            CreatedAt = DateTime.UtcNow
-        };
-
-        _db.Bookings.Add(booking);
-        await _db.SaveChangesAsync();
-
-        booking.TourPackage = package;
-        return CreatedAtAction(nameof(GetById), new { id = booking.Id }, ToDto(booking));
+        var result = await _bookings.CreateAsync(dto, CurrentUserId());
+        if (!result.IsSuccess) return result.ToErrorResult(this);
+        return CreatedAtAction(nameof(GetById), new { id = result.Value!.Id }, result.Value);
     }
 
     // GET /api/bookings/{id}
@@ -66,43 +53,53 @@ public class BookingsController : ControllerBase
     [Authorize]
     public async Task<ActionResult<BookingDto>> GetById(int id)
     {
-        var b = await _db.Bookings.Include(x => x.TourPackage).FirstOrDefaultAsync(x => x.Id == id);
-        return b is null ? NotFound() : Ok(ToDto(b));
+        // Only the booking's owner (or an admin) may view it.
+        var result = await _bookings.GetByIdForUserAsync(id, CurrentUserId(), User.IsInRole("Admin"));
+        return result.IsSuccess ? Ok(result.Value) : result.ToErrorResult(this);
     }
 
-    // GET /api/bookings/mine  (the signed-in user's own bookings)
+    // GET /api/bookings/mine?page=&pageSize=  (the signed-in user's own bookings)
+    // Pagination is opt-in; the total count is returned in the X-Total-Count header.
     [HttpGet("mine")]
     [Authorize]
-    public async Task<ActionResult<IEnumerable<BookingDto>>> GetMine()
+    public async Task<ActionResult<IEnumerable<BookingDto>>> GetMine([FromQuery] int? page, [FromQuery] int? pageSize)
     {
         var userId = CurrentUserId();
         if (userId is null) return Unauthorized();
 
-        var items = await _db.Bookings
-            .Include(b => b.TourPackage)
-            .Where(b => b.UserId == userId)
-            .OrderByDescending(b => b.CreatedAt)
-            .Select(b => ToDto(b))
-            .ToListAsync();
+        var paging = PageRequest.FromQuery(page, pageSize);
+        if (paging is null)
+        {
+            var all = await _bookings.GetMineAsync(userId.Value);
+            Response.Headers[PageRequest.TotalCountHeader] = all.Count.ToString();
+            return Ok(all);
+        }
 
-        return Ok(items);
+        var result = await _bookings.GetMinePagedAsync(userId.Value, paging);
+        Response.Headers[PageRequest.TotalCountHeader] = result.Total.ToString();
+        return Ok(result.Items);
     }
 
-    // GET /api/bookings?status=  (admin: all bookings)
+    // GET /api/bookings?status=&page=&pageSize=  (admin: all bookings)
+    // Pagination is opt-in; the total count is returned in the X-Total-Count header.
     [HttpGet]
     [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<IEnumerable<BookingDto>>> GetAll([FromQuery] BookingStatus? status)
+    public async Task<ActionResult<IEnumerable<BookingDto>>> GetAll(
+        [FromQuery] BookingStatus? status,
+        [FromQuery] int? page,
+        [FromQuery] int? pageSize)
     {
-        var query = _db.Bookings.Include(b => b.TourPackage).AsQueryable();
-        if (status.HasValue)
-            query = query.Where(b => b.Status == status.Value);
+        var paging = PageRequest.FromQuery(page, pageSize);
+        if (paging is null)
+        {
+            var all = await _bookings.GetAllAsync(status);
+            Response.Headers[PageRequest.TotalCountHeader] = all.Count.ToString();
+            return Ok(all);
+        }
 
-        var items = await query
-            .OrderByDescending(b => b.CreatedAt)
-            .Select(b => ToDto(b))
-            .ToListAsync();
-
-        return Ok(items);
+        var result = await _bookings.GetAllPagedAsync(status, paging);
+        Response.Headers[PageRequest.TotalCountHeader] = result.Total.ToString();
+        return Ok(result.Items);
     }
 
     // PUT /api/bookings/{id}/status  (admin)
@@ -110,11 +107,7 @@ public class BookingsController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> UpdateStatus(int id, UpdateBookingStatusDto dto)
     {
-        var b = await _db.Bookings.FindAsync(id);
-        if (b is null) return NotFound();
-
-        b.Status = dto.Status;
-        await _db.SaveChangesAsync();
-        return NoContent();
+        var result = await _bookings.UpdateStatusAsync(id, dto.Status);
+        return result.IsSuccess ? NoContent() : result.ToErrorResult(this);
     }
 }
