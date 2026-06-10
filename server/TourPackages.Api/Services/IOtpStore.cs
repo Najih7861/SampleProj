@@ -1,8 +1,8 @@
 namespace TourPackages.Api.Services;
 
 /// <summary>
-/// Short-lived store for one-time passwords (password-reset codes), backed by a
-/// distributed cache (Redis in production, in-memory in dev). Net-new, additive.
+/// Short-lived store for one-time passwords (password-reset codes), backed by an
+/// in-process memory cache (no external dependency). Net-new, additive.
 /// </summary>
 public interface IOtpStore
 {

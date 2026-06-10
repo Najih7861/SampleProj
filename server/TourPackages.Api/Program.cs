@@ -72,7 +72,7 @@ builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 // Rate limiting (brute-force guard on the auth endpoints).
 builder.Services.AddAuthRateLimiting();
 
-// OTP password-reset infrastructure (Redis/in-memory OTP store + SMTP/logging email).
+// OTP password-reset infrastructure (in-memory OTP store + SMTP/logging email).
 builder.Services.AddOtpInfrastructure(builder.Configuration);
 
 // Swagger / OpenAPI UI for manual testing

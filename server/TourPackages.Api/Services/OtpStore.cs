@@ -1,27 +1,39 @@
-using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace TourPackages.Api.Services;
 
 /// <summary>
-/// OTP store backed by <see cref="IDistributedCache"/>. When a Redis connection
-/// string is configured the cache is Redis (so OTPs live in Redis with the given
-/// TTL); otherwise an in-memory distributed cache is used (dev fallback).
+/// OTP store backed by the framework's in-process <see cref="IMemoryCache"/>
+/// (no external dependency / install). Codes expire automatically via the TTL.
+///
+/// Trade-off: entries live in the app's memory, so they are not shared across
+/// multiple instances and are lost on restart. Fine for a single-instance
+/// deployment; swap this implementation (the <see cref="IOtpStore"/> seam is
+/// the only touch point) for a distributed store if you scale out.
 /// </summary>
 public class OtpStore : IOtpStore
 {
-    private readonly IDistributedCache _cache;
+    private readonly IMemoryCache _cache;
 
-    public OtpStore(IDistributedCache cache) => _cache = cache;
+    public OtpStore(IMemoryCache cache) => _cache = cache;
 
     private static string Key(string email) => $"otp:pwreset:{email.Trim().ToLowerInvariant()}";
 
-    public Task StoreAsync(string email, string otp, TimeSpan ttl) =>
-        _cache.SetStringAsync(Key(email), otp, new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = ttl
-        });
+    public Task StoreAsync(string email, string otp, TimeSpan ttl)
+    {
+        _cache.Set(Key(email), otp, ttl);
+        return Task.CompletedTask;
+    }
 
-    public Task<string?> RetrieveAsync(string email) => _cache.GetStringAsync(Key(email));
+    public Task<string?> RetrieveAsync(string email)
+    {
+        _cache.TryGetValue(Key(email), out string? otp);
+        return Task.FromResult(otp);
+    }
 
-    public Task RemoveAsync(string email) => _cache.RemoveAsync(Key(email));
+    public Task RemoveAsync(string email)
+    {
+        _cache.Remove(Key(email));
+        return Task.CompletedTask;
+    }
 }

@@ -3,21 +3,17 @@ using TourPackages.Api.Services;
 namespace TourPackages.Api.Extensions;
 
 /// <summary>
-/// Wires the OTP password-reset infrastructure: a distributed cache for codes
-/// and an email sender, each chosen from configuration. Net-new, additive.
+/// Wires the OTP password-reset infrastructure: an in-process cache for codes
+/// (no external dependency) and an email sender chosen from configuration.
+/// Net-new, additive.
 /// </summary>
 public static class InfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddOtpInfrastructure(this IServiceCollection services, IConfiguration config)
     {
-        // OTP store: Redis when a connection string is configured (codes live in
-        // Redis with their TTL); in-memory distributed cache otherwise (dev).
-        var redisConnection = config["Redis:ConnectionString"];
-        if (!string.IsNullOrWhiteSpace(redisConnection))
-            services.AddStackExchangeRedisCache(options => options.Configuration = redisConnection);
-        else
-            services.AddDistributedMemoryCache();
-
+        // OTP store: framework in-memory cache (codes expire via their TTL). No
+        // external service/install required.
+        services.AddMemoryCache();
         services.AddScoped<IOtpStore, OtpStore>();
 
         // Email: real SMTP when a host is configured, otherwise log the message
