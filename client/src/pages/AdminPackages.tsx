@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Compass, Edit3, Loader2, Plus, Trash2 } from 'lucide-react'
 import {
   createPackage,
   deletePackage,
@@ -6,6 +7,9 @@ import {
   updatePackage,
 } from '../api/client'
 import PackageForm from '../components/PackageForm'
+import DataState from '../components/ui/DataState'
+import Modal from '../components/ui/Modal'
+import StatusBadge from '../components/ui/StatusBadge'
 import type { Package, PackageInput } from '../types'
 
 export default function AdminPackages() {
@@ -15,8 +19,8 @@ export default function AdminPackages() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Package | undefined>(undefined)
 
-  async function load() {
-    setLoading(true)
+  async function load(busy = true) {
+    if (busy) setLoading(true)
     setError(null)
     try {
       setPackages(await getPackages())
@@ -27,7 +31,25 @@ export default function AdminPackages() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    let active = true
+
+    async function loadPackages() {
+      try {
+        const data = await getPackages()
+        if (!active) return
+        setPackages(data)
+        setError(null)
+      } catch {
+        if (active) setError('Could not load packages. Is the API running?')
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    void loadPackages()
+    return () => { active = false }
+  }, [])
 
   function openCreate() {
     setEditing(undefined)
@@ -59,42 +81,62 @@ export default function AdminPackages() {
     <div className="page">
       <div className="container">
         <div className="toolbar">
-          <h1>Manage Packages</h1>
-          <button className="btn-primary" onClick={openCreate}>+ New Package</button>
+          <div>
+            <p className="eyebrow">Admin</p>
+            <h1>Manage Packages</h1>
+          </div>
+          <button className="btn-primary icon-text" onClick={openCreate}>
+            <Plus size={17} aria-hidden />
+            New Package
+          </button>
         </div>
 
-        {loading && <p className="center-msg">Loading…</p>}
-        {error && <div className="notice notice-error">{error}</div>}
+        {loading && (
+          <DataState icon={<Loader2 className="spin" size={28} />} message="Loading packages..." />
+        )}
+        {error && (
+          <DataState tone="error" title="Packages unavailable" message={error} />
+        )}
 
         {!loading && !error && (
           <div className="table-wrap">
-            <table>
+            <table className="responsive-table">
               <thead>
                 <tr>
-                  <th>Title</th><th>Destination</th><th>Price</th>
-                  <th>Duration</th><th>Status</th><th></th>
+                  <th>Title</th>
+                  <th>Destination</th>
+                  <th>Price</th>
+                  <th>Duration</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {packages.map((p) => (
-                  <tr key={p.id}>
-                    <td>{p.title}</td>
-                    <td>{p.destination}</td>
-                    <td>${p.price.toLocaleString()}</td>
-                    <td>{p.durationDays} days</td>
-                    <td>
-                      {p.isAvailable
-                        ? <span className="badge badge-confirmed">Available</span>
-                        : <span className="badge badge-cancelled">Unavailable</span>}
+                {packages.map((pkg) => (
+                  <tr key={pkg.id}>
+                    <td data-label="Title">
+                      <div className="record-title"><Compass size={16} aria-hidden /> {pkg.title}</div>
                     </td>
-                    <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
-                      <button className="btn-ghost btn-sm" onClick={() => openEdit(p)}>Edit</button>{' '}
-                      <button className="btn-danger btn-sm" onClick={() => handleDelete(p)}>Delete</button>
+                    <td data-label="Destination">{pkg.destination}</td>
+                    <td data-label="Price">${pkg.price.toLocaleString()}</td>
+                    <td data-label="Duration">{pkg.durationDays} days</td>
+                    <td data-label="Status">
+                      <StatusBadge status={pkg.isAvailable ? 'Available' : 'Unavailable'} />
+                    </td>
+                    <td data-label="Actions" className="cell-actions">
+                      <button className="btn-ghost btn-sm icon-text" onClick={() => openEdit(pkg)}>
+                        <Edit3 size={15} aria-hidden />
+                        Edit
+                      </button>
+                      <button className="btn-danger btn-sm icon-text" onClick={() => handleDelete(pkg)}>
+                        <Trash2 size={15} aria-hidden />
+                        Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
                 {packages.length === 0 && (
-                  <tr><td colSpan={6} className="muted" style={{ textAlign: 'center' }}>No packages yet.</td></tr>
+                  <tr><td colSpan={6}><span className="muted">No packages yet.</span></td></tr>
                 )}
               </tbody>
             </table>
@@ -103,15 +145,13 @@ export default function AdminPackages() {
       </div>
 
       {showForm && (
-        <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <PackageForm
-              initial={editing}
-              onSubmit={handleSubmit}
-              onCancel={() => setShowForm(false)}
-            />
-          </div>
-        </div>
+        <Modal title={editing ? 'Edit Package' : 'New Package'} onClose={() => setShowForm(false)}>
+          <PackageForm
+            initial={editing}
+            onSubmit={handleSubmit}
+            onCancel={() => setShowForm(false)}
+          />
+        </Modal>
       )}
     </div>
   )

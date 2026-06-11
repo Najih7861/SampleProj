@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { KeyRound, MailCheck, RotateCcw } from 'lucide-react'
 import { authErrorMessage } from '../../api/auth'
 import { requestOtp, verifyOtp } from '../../api/passwordResetOtp'
 
@@ -8,7 +9,7 @@ interface Props {
 
 type Step = 'request' | 'verify'
 
-const RESEND_COOLDOWN_SECONDS = 60 // resend becomes available after 1 minute
+const RESEND_COOLDOWN_SECONDS = 60
 
 function formatClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60)
@@ -20,32 +21,28 @@ export default function ForgotPasswordOtpForm({ onBackToLogin }: Props) {
   const [step, setStep] = useState<Step>('request')
   const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
-
   const [otp, setOtp] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-
   const [otpSecondsLeft, setOtpSecondsLeft] = useState(0)
   const [resendSecondsLeft, setResendSecondsLeft] = useState(0)
-
   const [submitting, setSubmitting] = useState(false)
   const [resending, setResending] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
 
-  // One ticking interval (only while verifying) drives both countdowns.
   useEffect(() => {
     if (step !== 'verify') return
     const id = setInterval(() => {
-      setOtpSecondsLeft((s) => (s > 0 ? s - 1 : 0))
-      setResendSecondsLeft((s) => (s > 0 ? s - 1 : 0))
+      setOtpSecondsLeft((seconds) => (seconds > 0 ? seconds - 1 : 0))
+      setResendSecondsLeft((seconds) => (seconds > 0 ? seconds - 1 : 0))
     }, 1000)
     return () => clearInterval(id)
   }, [step])
 
-  async function handleRequest(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleRequest(event: React.FormEvent) {
+    event.preventDefault()
     setError(null)
     setSubmitting(true)
     try {
@@ -78,8 +75,8 @@ export default function ForgotPasswordOtpForm({ onBackToLogin }: Props) {
     }
   }
 
-  async function handleVerify(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleVerify(event: React.FormEvent) {
+    event.preventDefault()
     setError(null)
     if (otpSecondsLeft <= 0) {
       setError('Your code has expired. Please resend a new one.')
@@ -105,20 +102,20 @@ export default function ForgotPasswordOtpForm({ onBackToLogin }: Props) {
       <div>
         <h2>Password reset</h2>
         <div className="notice notice-success">{done}</div>
-        <button type="button" className="btn-primary" onClick={onBackToLogin} style={{ width: '100%' }}>
+        <button type="button" className="btn-primary icon-text stretch-action" onClick={onBackToLogin}>
+          <KeyRound size={17} aria-hidden />
           Back to Log In
         </button>
       </div>
     )
   }
 
-  // Step 1 — enter username, request a code.
   if (step === 'request') {
     return (
       <form onSubmit={handleRequest}>
         <h2>Forgot your password?</h2>
-        <p className="muted" style={{ marginTop: 0 }}>
-          Enter your username and we’ll email a verification code to the address on your account.
+        <p className="muted auth-copy">
+          Enter your username and we will email a verification code to the address on your account.
         </p>
         {error && <div className="notice notice-error">{error}</div>}
 
@@ -128,30 +125,29 @@ export default function ForgotPasswordOtpForm({ onBackToLogin }: Props) {
             id="otp-username"
             required
             value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(event) => setUsername(event.target.value)}
             autoComplete="username"
           />
         </div>
 
-        <button type="submit" className="btn-cta" disabled={submitting} style={{ width: '100%' }}>
-          {submitting ? 'Sending…' : 'Send code'}
+        <button type="submit" className="btn-cta icon-text stretch-action" disabled={submitting}>
+          <MailCheck size={17} aria-hidden />
+          {submitting ? 'Sending...' : 'Send code'}
         </button>
 
-        <div className="auth-links" style={{ justifyContent: 'center' }}>
+        <div className="auth-links auth-links-center">
           <button type="button" className="link-btn" onClick={onBackToLogin}>Back to Log In</button>
         </div>
       </form>
     )
   }
 
-  // Step 2 — enter the emailed code + a new password.
   const expired = otpSecondsLeft <= 0
+
   return (
     <form onSubmit={handleVerify}>
       <h2>Enter your code</h2>
-      <div className="notice notice-success">
-        OTP sent to <strong>{email}</strong>
-      </div>
+      <div className="notice notice-success">OTP sent to <strong>{email}</strong></div>
       {error && <div className="notice notice-error">{error}</div>}
 
       <div className="form-row">
@@ -164,28 +160,21 @@ export default function ForgotPasswordOtpForm({ onBackToLogin }: Props) {
           placeholder="6-digit code"
           required
           value={otp}
-          onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+          onChange={(event) => setOtp(event.target.value.replace(/\D/g, ''))}
         />
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: '0.35rem',
-            gap: '0.75rem',
-          }}
-        >
-          <span className="muted" style={{ fontSize: '0.85rem' }}>
+        <div className="otp-meta">
+          <span className="field-hint">
             {expired ? 'Code expired' : `Code expires in ${formatClock(otpSecondsLeft)}`}
           </span>
           <button
             type="button"
-            className="link-btn"
+            className="link-btn icon-text"
             onClick={handleResend}
             disabled={resendSecondsLeft > 0 || resending}
           >
+            <RotateCcw size={15} aria-hidden />
             {resending
-              ? 'Resending…'
+              ? 'Resending...'
               : resendSecondsLeft > 0
                 ? `Resend in ${formatClock(resendSecondsLeft)}`
                 : 'Resend code'}
@@ -201,7 +190,7 @@ export default function ForgotPasswordOtpForm({ onBackToLogin }: Props) {
           required
           minLength={6}
           value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
+          onChange={(event) => setNewPassword(event.target.value)}
           autoComplete="new-password"
         />
       </div>
@@ -213,16 +202,17 @@ export default function ForgotPasswordOtpForm({ onBackToLogin }: Props) {
           required
           minLength={6}
           value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
+          onChange={(event) => setConfirm(event.target.value)}
           autoComplete="new-password"
         />
       </div>
 
-      <button type="submit" className="btn-cta" disabled={verifying || expired} style={{ width: '100%' }}>
-        {verifying ? 'Resetting…' : 'Reset Password'}
+      <button type="submit" className="btn-cta icon-text stretch-action" disabled={verifying || expired}>
+        <KeyRound size={17} aria-hidden />
+        {verifying ? 'Resetting...' : 'Reset Password'}
       </button>
 
-      <div className="auth-links" style={{ justifyContent: 'center' }}>
+      <div className="auth-links auth-links-center">
         <button type="button" className="link-btn" onClick={onBackToLogin}>Back to Log In</button>
       </div>
     </form>

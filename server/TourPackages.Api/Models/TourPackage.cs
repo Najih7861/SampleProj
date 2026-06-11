@@ -36,4 +36,6 @@ public class TourPackage
     public Place? Place { get; set; }
 
     public List<Booking> Bookings { get; set; } = new();
+
+    public List<Review> Reviews { get; set; } = new();
 }

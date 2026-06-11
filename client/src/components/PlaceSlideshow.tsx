@@ -6,13 +6,10 @@ interface Props {
   intervalMs?: number
 }
 
-// Auto-advancing image slideshow. Cycles every `intervalMs` (default 4s) and
-// clears its timer on unmount. Dots let the user jump to a specific photo.
+// Auto-advancing image slideshow. Dots let the user jump to a specific photo.
 export default function PlaceSlideshow({ images, alt, intervalMs = 4000 }: Props) {
   const [index, setIndex] = useState(0)
   const count = images.length
-  // Clamp in render (rather than resetting via an effect) so a changed image
-  // set can't point `index` past the end of the array.
   const activeIndex = count > 0 ? index % count : 0
 
   useEffect(() => {
@@ -31,7 +28,7 @@ export default function PlaceSlideshow({ images, alt, intervalMs = 4000 }: Props
         <img
           key={`${src}-${i}`}
           src={src}
-          alt={`${alt} — photo ${i + 1}`}
+          alt={`${alt} photo ${i + 1}`}
           className={`slide ${i === activeIndex ? 'slide-active' : ''}`}
           loading="lazy"
         />

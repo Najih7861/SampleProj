@@ -77,3 +77,24 @@ export interface PackageFilters {
   minPrice?: number
   maxPrice?: number
 }
+
+export interface Review {
+  id: number
+  tourPackageId: number
+  userId: number
+  username: string
+  rating: number
+  comment?: string | null
+  createdAt: string
+}
+
+export interface ReviewInput {
+  tourPackageId: number
+  rating: number
+  comment?: string
+}
+
+export interface ReviewSummary {
+  averageRating: number
+  reviewCount: number
+}

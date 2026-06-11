@@ -15,12 +15,14 @@ public static class DependencyInjection
         services.AddScoped<IBookingRepository, BookingRepository>();
         services.AddScoped<IPackageRepository, PackageRepository>();
         services.AddScoped<IPlaceRepository, PlaceRepository>();
+        services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
 
         // Domain services (business rules).
         services.AddScoped<IBookingService, BookingService>();
         services.AddScoped<IPackageService, PackageService>();
         services.AddScoped<IPlaceService, PlaceService>();
+        services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUploadService, UploadService>();
 

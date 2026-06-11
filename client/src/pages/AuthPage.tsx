@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { KeyRound, LogIn, UserPlus } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import type { AuthUser } from '../api/auth'
 import LoginForm from '../components/auth/LoginForm'
@@ -8,33 +9,47 @@ import ForgotPasswordOtpForm from '../components/auth/ForgotPasswordOtpForm'
 
 type View = 'login' | 'register' | 'forgot'
 
+interface AuthLocationState {
+  from?: string
+}
+
 export default function AuthPage() {
   const [view, setView] = useState<View>('login')
   const { login } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = (location.state as AuthLocationState | null)?.from
 
   function handleAuthSuccess(user: AuthUser) {
     login(user)
-    // Admins land on their management area; users on the places Home.
-    navigate(user.role === 'Admin' ? '/admin/bookings' : '/')
+    navigate(user.role === 'Admin' ? '/admin/bookings' : from || '/')
   }
 
   return (
-    <div className="page">
+    <div className="page auth-page">
       <div className="container">
         <div className="auth-shell">
+          <div className="section-heading section-heading-center">
+            <p className="eyebrow">Secure access</p>
+            <h1>{view === 'forgot' ? 'Reset your password' : 'Welcome to Wanderlust'}</h1>
+          </div>
+
           {view !== 'forgot' && (
-            <div className="auth-tabs">
+            <div className="auth-tabs" role="tablist" aria-label="Authentication view">
               <button
-                className={`auth-tab ${view === 'login' ? 'active' : ''}`}
+                type="button"
+                className={`auth-tab icon-text ${view === 'login' ? 'active' : ''}`}
                 onClick={() => setView('login')}
               >
+                <LogIn size={17} aria-hidden />
                 Login
               </button>
               <button
-                className={`auth-tab ${view === 'register' ? 'active' : ''}`}
+                type="button"
+                className={`auth-tab icon-text ${view === 'register' ? 'active' : ''}`}
                 onClick={() => setView('register')}
               >
+                <UserPlus size={17} aria-hidden />
                 Register
               </button>
             </div>
@@ -55,7 +70,10 @@ export default function AuthPage() {
               />
             )}
             {view === 'forgot' && (
-              <ForgotPasswordOtpForm onBackToLogin={() => setView('login')} />
+              <div>
+                <div className="auth-forgot-icon" aria-hidden><KeyRound size={24} /></div>
+                <ForgotPasswordOtpForm onBackToLogin={() => setView('login')} />
+              </div>
             )}
           </div>
         </div>

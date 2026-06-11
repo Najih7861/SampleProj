@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Loader2, MapPin, ShieldCheck, XCircle } from 'lucide-react'
 import { getBookings, updateBookingStatus } from '../api/client'
+import DataState from '../components/ui/DataState'
+import StatusBadge from '../components/ui/StatusBadge'
 import type { Booking, BookingStatus } from '../types'
 
 const STATUSES: BookingStatus[] = ['Pending', 'Confirmed', 'Cancelled']
-
-function badgeClass(status: BookingStatus) {
-  return `badge badge-${status.toLowerCase()}`
-}
 
 export default function AdminBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -14,11 +13,11 @@ export default function AdminBookings() {
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<BookingStatus | ''>('')
 
-  async function load() {
-    setLoading(true)
+  async function load(status: BookingStatus | '' = filter, busy = true) {
+    if (busy) setLoading(true)
     setError(null)
     try {
-      setBookings(await getBookings(filter || undefined))
+      setBookings(await getBookings(status || undefined))
     } catch {
       setError('Could not load bookings. Is the API running?')
     } finally {
@@ -27,29 +26,48 @@ export default function AdminBookings() {
   }
 
   useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let active = true
+
+    async function loadBookings() {
+      try {
+        const data = await getBookings(filter || undefined)
+        if (!active) return
+        setBookings(data)
+        setError(null)
+      } catch {
+        if (active) setError('Could not load bookings. Is the API running?')
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    void loadBookings()
+    return () => { active = false }
   }, [filter])
 
-  async function handleStatusChange(b: Booking, status: BookingStatus) {
-    await updateBookingStatus(b.id, status)
-    await load()
+  function handleFilterChange(status: BookingStatus | '') {
+    setLoading(true)
+    setFilter(status)
   }
 
-  async function handleCancel(b: Booking) {
-    if (!window.confirm(`Cancel ${b.customerName}'s booking for "${b.packageTitle}"?`)) return
-    await updateBookingStatus(b.id, 'Cancelled')
-    await load()
+  async function handleStatusChange(booking: Booking, status: BookingStatus) {
+    await updateBookingStatus(booking.id, status)
+    await load(filter)
   }
 
-  // Group bookings by place (the package's destination).
+  async function handleCancel(booking: Booking) {
+    if (!window.confirm(`Cancel ${booking.customerName}'s booking for "${booking.packageTitle}"?`)) return
+    await updateBookingStatus(booking.id, 'Cancelled')
+    await load(filter)
+  }
+
   const groups = useMemo(() => {
     const map = new Map<string, Booking[]>()
-    for (const b of bookings) {
-      const key = b.packageDestination || 'Unspecified place'
+    for (const booking of bookings) {
+      const key = booking.packageDestination || 'Unspecified place'
       const list = map.get(key)
-      if (list) list.push(b)
-      else map.set(key, [b])
+      if (list) list.push(booking)
+      else map.set(key, [booking])
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]))
   }, [bookings])
@@ -58,57 +76,79 @@ export default function AdminBookings() {
     <div className="page">
       <div className="container">
         <div className="toolbar">
-          <h1>Bookings</h1>
-          <div className="field">
-            <label htmlFor="status-filter">Filter by status</label>
-            <select id="status-filter" value={filter}
-              onChange={(e) => setFilter(e.target.value as BookingStatus | '')}>
+          <div>
+            <p className="eyebrow">Admin</p>
+            <h1>Bookings</h1>
+          </div>
+          <div className="field toolbar-field">
+            <label htmlFor="status-filter"><ShieldCheck size={15} aria-hidden /> Filter by status</label>
+            <select
+              id="status-filter"
+              value={filter}
+              onChange={(event) => handleFilterChange(event.target.value as BookingStatus | '')}
+            >
               <option value="">All</option>
-              {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
             </select>
           </div>
         </div>
 
-        {loading && <p className="center-msg">Loading…</p>}
-        {error && <div className="notice notice-error">{error}</div>}
+        {loading && (
+          <DataState icon={<Loader2 className="spin" size={28} />} message="Loading bookings..." />
+        )}
+        {error && (
+          <DataState tone="error" title="Bookings unavailable" message={error} />
+        )}
         {!loading && !error && bookings.length === 0 && (
-          <p className="center-msg">No bookings found.</p>
+          <DataState title="No bookings found" message="Bookings will appear here after customers reserve tours." />
         )}
 
         {!loading && !error && groups.map(([place, placeBookings]) => (
           <section key={place} className="booking-group">
-            <h2 className="booking-group-title">📍 {place} <span className="muted">({placeBookings.length})</span></h2>
+            <h2 className="booking-group-title">
+              <MapPin size={19} aria-hidden />
+              {place}
+              <span className="muted">({placeBookings.length})</span>
+            </h2>
             <div className="table-wrap">
-              <table>
+              <table className="responsive-table">
                 <thead>
                   <tr>
-                    <th>Customer</th><th>Tour</th><th>Travel date</th>
-                    <th>Travelers</th><th>Status</th><th>Set status</th><th></th>
+                    <th>Customer</th>
+                    <th>Tour</th>
+                    <th>Travel date</th>
+                    <th>Travelers</th>
+                    <th>Status</th>
+                    <th>Set status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {placeBookings.map((b) => (
-                    <tr key={b.id}>
-                      <td>
-                        {b.customerName}<br />
-                        <span className="muted" style={{ fontSize: '0.8rem' }}>{b.email}</span>
+                  {placeBookings.map((booking) => (
+                    <tr key={booking.id}>
+                      <td data-label="Customer">
+                        <div className="record-title">{booking.customerName}</div>
+                        <span className="record-note">{booking.email}</span>
                       </td>
-                      <td>{b.packageTitle}</td>
-                      <td>{new Date(b.travelDate).toLocaleDateString()}</td>
-                      <td>{b.numberOfTravelers}</td>
-                      <td><span className={badgeClass(b.status)}>{b.status}</span></td>
-                      <td>
-                        <select value={b.status}
-                          onChange={(e) => handleStatusChange(b, e.target.value as BookingStatus)}>
-                          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      <td data-label="Tour">{booking.packageTitle}</td>
+                      <td data-label="Travel date">{new Date(booking.travelDate).toLocaleDateString()}</td>
+                      <td data-label="Travelers">{booking.numberOfTravelers}</td>
+                      <td data-label="Status"><StatusBadge status={booking.status} /></td>
+                      <td data-label="Set status">
+                        <select
+                          value={booking.status}
+                          onChange={(event) => handleStatusChange(booking, event.target.value as BookingStatus)}
+                        >
+                          {STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
                         </select>
                       </td>
-                      <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                      <td data-label="Actions" className="cell-actions">
                         <button
-                          className="btn-danger btn-sm"
-                          disabled={b.status === 'Cancelled'}
-                          onClick={() => handleCancel(b)}
+                          className="btn-danger btn-sm icon-text"
+                          disabled={booking.status === 'Cancelled'}
+                          onClick={() => handleCancel(booking)}
                         >
+                          <XCircle size={15} aria-hidden />
                           Cancel
                         </button>
                       </td>

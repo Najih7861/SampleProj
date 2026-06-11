@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Place> Places => Set<Place>();
     public DbSet<PlaceImage> PlaceImages => Set<PlaceImage>();
+    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -25,6 +26,10 @@ public class AppDbContext : DbContext
             e.HasMany(p => p.Bookings)
                 .WithOne(b => b.TourPackage)
                 .HasForeignKey(b => b.TourPackageId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasMany(p => p.Reviews)
+                .WithOne(r => r.TourPackage)
+                .HasForeignKey(r => r.TourPackageId)
                 .OnDelete(DeleteBehavior.Cascade);
             // Optional grouping under a Place. Deleting a place must NOT delete
             // its packages, so the FK is set to null instead of cascading.
@@ -61,6 +66,15 @@ public class AppDbContext : DbContext
             e.Property(u => u.Role).HasConversion<int>();
             e.HasIndex(u => u.Username).IsUnique();
             e.HasIndex(u => u.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<Review>(e =>
+        {
+            e.HasIndex(r => new { r.TourPackageId, r.UserId }).IsUnique();
+            e.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Deterministic seed data (fixed timestamps so migrations are stable).

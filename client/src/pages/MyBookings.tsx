@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
+import { CalendarPlus, Loader2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getMyBookings } from '../api/client'
-import type { Booking, BookingStatus } from '../types'
+import DataState from '../components/ui/DataState'
+import StatusBadge from '../components/ui/StatusBadge'
+import type { Booking } from '../types'
 
-function badgeClass(status: BookingStatus) {
-  return `badge badge-${status.toLowerCase()}`
-}
-
-// The signed-in user's own bookings (filtered server-side by the JWT user id).
 export default function MyBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
@@ -15,10 +13,21 @@ export default function MyBookings() {
 
   useEffect(() => {
     let active = true
-    getMyBookings()
-      .then((data) => { if (active) setBookings(data) })
-      .catch(() => { if (active) setError('Could not load your bookings. Is the API running?') })
-      .finally(() => { if (active) setLoading(false) })
+
+    async function loadBookings() {
+      try {
+        const data = await getMyBookings()
+        if (!active) return
+        setBookings(data)
+        setError(null)
+      } catch {
+        if (active) setError('Could not load your bookings. Is the API running?')
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    void loadBookings()
     return () => { active = false }
   }, [])
 
@@ -26,34 +35,52 @@ export default function MyBookings() {
     <div className="page">
       <div className="container">
         <div className="toolbar">
-          <h1>My Bookings</h1>
-          <Link to="/explore" className="btn-primary btn-sm">Book another tour</Link>
+          <div>
+            <p className="eyebrow">Your trips</p>
+            <h1>My Bookings</h1>
+          </div>
+          <Link to="/explore" className="btn-primary btn-sm icon-text">
+            <CalendarPlus size={16} aria-hidden />
+            Book another tour
+          </Link>
         </div>
 
-        {loading && <p className="center-msg">Loading…</p>}
-        {error && <div className="notice notice-error">{error}</div>}
+        {loading && (
+          <DataState icon={<Loader2 className="spin" size={28} />} message="Loading bookings..." />
+        )}
+        {error && (
+          <DataState tone="error" title="Bookings unavailable" message={error} />
+        )}
         {!loading && !error && bookings.length === 0 && (
-          <p className="center-msg">You haven't booked any tours yet.</p>
+          <DataState
+            title="No bookings yet"
+            message="Your reserved tours will appear here after you book."
+            action={<Link to="/explore" className="btn-cta icon-text"><CalendarPlus size={17} /> Browse tours</Link>}
+          />
         )}
 
         {!loading && !error && bookings.length > 0 && (
           <div className="table-wrap">
-            <table>
+            <table className="responsive-table">
               <thead>
                 <tr>
-                  <th>Tour</th><th>Destination</th><th>Travel date</th>
-                  <th>Travelers</th><th>Status</th><th>Booked on</th>
+                  <th>Tour</th>
+                  <th>Destination</th>
+                  <th>Travel date</th>
+                  <th>Travelers</th>
+                  <th>Status</th>
+                  <th>Booked on</th>
                 </tr>
               </thead>
               <tbody>
-                {bookings.map((b) => (
-                  <tr key={b.id}>
-                    <td>{b.packageTitle}</td>
-                    <td>{b.packageDestination}</td>
-                    <td>{new Date(b.travelDate).toLocaleDateString()}</td>
-                    <td>{b.numberOfTravelers}</td>
-                    <td><span className={badgeClass(b.status)}>{b.status}</span></td>
-                    <td>{new Date(b.createdAt).toLocaleDateString()}</td>
+                {bookings.map((booking) => (
+                  <tr key={booking.id}>
+                    <td data-label="Tour">{booking.packageTitle}</td>
+                    <td data-label="Destination">{booking.packageDestination}</td>
+                    <td data-label="Travel date">{new Date(booking.travelDate).toLocaleDateString()}</td>
+                    <td data-label="Travelers">{booking.numberOfTravelers}</td>
+                    <td data-label="Status"><StatusBadge status={booking.status} /></td>
+                    <td data-label="Booked on">{new Date(booking.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>

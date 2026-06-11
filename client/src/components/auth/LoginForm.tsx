@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { LogIn } from 'lucide-react'
 import { authErrorMessage, login } from '../../api/auth'
 import type { AuthUser } from '../../api/auth'
 
@@ -14,8 +15,8 @@ export default function LoginForm({ onSuccess, onCreateAccount, onForgotPassword
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
     setError(null)
     setSubmitting(true)
     try {
@@ -35,17 +36,29 @@ export default function LoginForm({ onSuccess, onCreateAccount, onForgotPassword
 
       <div className="form-row">
         <label htmlFor="login-username">Username</label>
-        <input id="login-username" required value={username}
-          onChange={(e) => setUsername(e.target.value)} autoComplete="username" />
+        <input
+          id="login-username"
+          required
+          value={username}
+          onChange={(event) => setUsername(event.target.value)}
+          autoComplete="username"
+        />
       </div>
       <div className="form-row">
         <label htmlFor="login-password">Password</label>
-        <input id="login-password" type="password" required value={password}
-          onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+        <input
+          id="login-password"
+          type="password"
+          required
+          value={password}
+          onChange={(event) => setPassword(event.target.value)}
+          autoComplete="current-password"
+        />
       </div>
 
-      <button type="submit" className="btn-cta" disabled={submitting} style={{ width: '100%' }}>
-        {submitting ? 'Logging in…' : 'Log In'}
+      <button type="submit" className="btn-cta icon-text stretch-action" disabled={submitting}>
+        <LogIn size={17} aria-hidden />
+        {submitting ? 'Logging in...' : 'Log In'}
       </button>
 
       <div className="auth-links">
