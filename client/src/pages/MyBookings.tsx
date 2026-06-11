@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { getMyBookings } from '../api/client'
+import CancelBookingButton from '../components/CancelBookingButton'
 import type { Booking, BookingStatus } from '../types'
 
 function badgeClass(status: BookingStatus) {
@@ -22,6 +23,13 @@ export default function MyBookings() {
     return () => { active = false }
   }, [])
 
+  // Flip the row to Cancelled locally after a successful cancel (no refetch).
+  function markCancelled(id: number) {
+    setBookings((prev) =>
+      prev.map((b): Booking => (b.id === id ? { ...b, status: 'Cancelled' } : b)),
+    )
+  }
+
   return (
     <div className="page">
       <div className="container">
@@ -42,7 +50,7 @@ export default function MyBookings() {
               <thead>
                 <tr>
                   <th>Tour</th><th>Destination</th><th>Travel date</th>
-                  <th>Travelers</th><th>Status</th><th>Booked on</th>
+                  <th>Travelers</th><th>Status</th><th>Booked on</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -54,6 +62,7 @@ export default function MyBookings() {
                     <td>{b.numberOfTravelers}</td>
                     <td><span className={badgeClass(b.status)}>{b.status}</span></td>
                     <td>{new Date(b.createdAt).toLocaleDateString()}</td>
+                    <td><CancelBookingButton booking={b} onCancelled={markCancelled} /></td>
                   </tr>
                 ))}
               </tbody>

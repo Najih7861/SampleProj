@@ -19,6 +19,7 @@ public static class DependencyInjection
 
         // Domain services (business rules).
         services.AddScoped<IBookingService, BookingService>();
+        services.AddScoped<IBookingCancellationService, BookingCancellationService>();
         services.AddScoped<IPackageService, PackageService>();
         services.AddScoped<IPlaceService, PlaceService>();
         services.AddScoped<IAuthService, AuthService>();
