@@ -36,6 +36,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // Repository + service layers (data access and domain logic).
 builder.Services.AddApplicationServices();
 
+// Reviews & ratings feature (self-contained registration; see ReviewServiceCollectionExtensions).
+builder.Services.AddReviewServices();
+
 // JWT bearer authentication + role-based authorization.
 builder.Services.AddScoped<JwtTokenService>();
 var jwt = builder.Configuration.GetSection("Jwt");

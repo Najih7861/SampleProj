@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<User> Users => Set<User>();
     public DbSet<Place> Places => Set<Place>();
     public DbSet<PlaceImage> PlaceImages => Set<PlaceImage>();
+    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -61,6 +62,21 @@ public class AppDbContext : DbContext
             e.Property(u => u.Role).HasConversion<int>();
             e.HasIndex(u => u.Username).IsUnique();
             e.HasIndex(u => u.Email).IsUnique();
+        });
+
+        modelBuilder.Entity<Review>(e =>
+        {
+            // One review per user per package.
+            e.HasIndex(r => new { r.TourPackageId, r.UserId }).IsUnique();
+            // Deleting a package or a user removes the associated reviews.
+            e.HasOne(r => r.TourPackage)
+                .WithMany()
+                .HasForeignKey(r => r.TourPackageId)
+                .OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Deterministic seed data (fixed timestamps so migrations are stable).

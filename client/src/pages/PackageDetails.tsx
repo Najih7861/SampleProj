@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { getPackage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import BookingForm from '../components/BookingForm'
+import PackageReviews from '../components/reviews/PackageReviews'
 import type { Package } from '../types'
 
 const FALLBACK_IMG =
@@ -85,6 +86,8 @@ export default function PackageDetails() {
             )}
           </div>
         </div>
+
+        <PackageReviews packageId={pkg.id} />
       </div>
     </div>
   )

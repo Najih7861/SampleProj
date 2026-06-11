@@ -311,3 +311,28 @@ tr:last-child td { border-bottom: none; }
 /* ---------- Grouped bookings (admin) ---------- */
 .booking-group { margin-bottom: 2rem; }
 .booking-group-title { font-size: 1.15rem; margin-bottom: 0.6rem; }
+
+/* ============================================================
+   Reviews & ratings (package details). Append-only addition.
+   ============================================================ */
+.reviews-section { margin-top: 2.5rem; border-top: 1px solid var(--color-border); padding-top: 1.5rem; }
+.reviews-header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.reviews-header h2 { margin: 0; }
+.reviews-summary { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 1.05rem; }
+
+/* Star display / picker */
+.stars { display: inline-flex; align-items: center; line-height: 1; color: var(--color-warm); letter-spacing: 1px; }
+.stars-sm { font-size: 0.95rem; }
+.stars-md { font-size: 1.2rem; }
+.stars-lg { font-size: 1.7rem; }
+.star-btn { background: none; border: none; padding: 0 0.05rem; margin: 0; color: var(--color-warm); font-size: inherit; line-height: 1; border-radius: 4px; }
+.star-btn:hover:not(:disabled) { background: none; transform: scale(1.1); }
+
+/* Review list */
+.review-list { list-style: none; padding: 0; margin: 0 0 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.review-item { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 1rem 1.2rem; }
+.review-head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.review-date { font-size: 0.82rem; }
+.review-delete { margin-left: auto; }
+.review-comment { margin: 0.5rem 0 0; line-height: 1.5; }
+.review-form { margin-top: 0.5rem; }
