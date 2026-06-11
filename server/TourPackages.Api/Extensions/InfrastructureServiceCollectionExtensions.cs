@@ -24,6 +24,13 @@ public static class InfrastructureServiceCollectionExtensions
         else
             services.AddScoped<IEmailSender, LoggingEmailSender>();
 
+        // Booking notification emails reuse the IEmailSender wired above. Wired
+        // here (rather than in Program.cs / DependencyInjection.cs) so the
+        // feature stays self-contained and additive. Runs after
+        // AddApplicationServices, so the decorator can wrap the registered
+        // BookingService.
+        services.AddBookingNotifications();
+
         return services;
     }
 }
