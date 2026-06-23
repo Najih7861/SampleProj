@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import PackageDetails from './pages/PackageDetails'
 import MyBookings from './pages/MyBookings'
 import ManagePlaces from './pages/ManagePlaces'
+import AdminDashboard from './pages/AdminDashboard'
 import AdminPackages from './pages/AdminPackages'
 import AdminBookings from './pages/AdminBookings'
 import AuthPage from './pages/AuthPage'
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/my-bookings" element={<RequireAuth><MyBookings /></RequireAuth>} />
 
           {/* Admin only */}
+          <Route path="/admin" element={<RequireAdmin><AdminDashboard /></RequireAdmin>} />
           <Route path="/admin/places" element={<RequireAdmin><ManagePlaces /></RequireAdmin>} />
           <Route path="/admin/packages" element={<RequireAdmin><AdminPackages /></RequireAdmin>} />
           <Route path="/admin/bookings" element={<RequireAdmin><AdminBookings /></RequireAdmin>} />

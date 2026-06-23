@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { KeyRound, LogIn, UserPlus } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { useToast } from '../components/ui/toast/useToast'
 import type { AuthUser } from '../api/auth'
 import LoginForm from '../components/auth/LoginForm'
 import RegisterForm from '../components/auth/RegisterForm'
@@ -18,11 +19,22 @@ export default function AuthPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const toast = useToast()
   const from = (location.state as AuthLocationState | null)?.from
 
   function handleAuthSuccess(user: AuthUser) {
     login(user)
-    navigate(user.role === 'Admin' ? '/admin/bookings' : from || '/')
+    navigate(user.role === 'Admin' ? '/admin' : from || '/')
+  }
+
+  function handleLoginSuccess(user: AuthUser) {
+    toast.success('Welcome back!')
+    handleAuthSuccess(user)
+  }
+
+  function handleRegisterSuccess(user: AuthUser) {
+    toast.success('Account created — welcome!')
+    handleAuthSuccess(user)
   }
 
   return (
@@ -58,14 +70,14 @@ export default function AuthPage() {
           <div className="form-card auth-panel">
             {view === 'login' && (
               <LoginForm
-                onSuccess={handleAuthSuccess}
+                onSuccess={handleLoginSuccess}
                 onCreateAccount={() => setView('register')}
                 onForgotPassword={() => setView('forgot')}
               />
             )}
             {view === 'register' && (
               <RegisterForm
-                onSuccess={handleAuthSuccess}
+                onSuccess={handleRegisterSuccess}
                 onAlreadyHaveAccount={() => setView('login')}
               />
             )}

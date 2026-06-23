@@ -98,3 +98,15 @@ export interface ReviewSummary {
   averageRating: number
   reviewCount: number
 }
+
+// Aggregated counts for the admin dashboard (GET /api/admin/stats).
+export interface AdminStats {
+  totalPackages: number
+  totalPlaces: number
+  totalBookings: number
+  pendingBookings: number
+  confirmedBookings: number
+  cancelledBookings: number
+  totalReviews: number
+  averageRating: number
+}

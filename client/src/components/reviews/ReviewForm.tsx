@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { Send } from 'lucide-react'
 import { createReview } from '../../api/reviews'
+import { authErrorMessage } from '../../api/auth'
+import { useToast } from '../ui/toast/useToast'
+import Button from '../ui/Button'
 import FormActions from '../ui/FormActions'
+import Textarea from '../ui/Textarea'
 import StarRating from './StarRating'
 import type { Review } from '../../types'
 
@@ -11,6 +15,7 @@ interface ReviewFormProps {
 }
 
 export default function ReviewForm({ packageId, onSubmitted }: ReviewFormProps) {
+  const toast = useToast()
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -28,18 +33,17 @@ export default function ReviewForm({ packageId, onSubmitted }: ReviewFormProps) 
       })
       setComment('')
       setRating(5)
+      toast.success('Thanks! Your review has been posted.')
       onSubmitted(review)
     } catch (err) {
-      const response = typeof err === 'object' && err && 'response' in err
-        ? (err as { response?: { data?: unknown; status?: number } }).response
+      const status = typeof err === 'object' && err && 'response' in err
+        ? (err as { response?: { status?: number } }).response?.status
         : undefined
 
-      if (response?.status === 403) {
+      if (status === 403) {
         setError('Admins cannot submit package reviews.')
-      } else if (typeof response?.data === 'string') {
-        setError(response.data)
       } else {
-        setError('Could not submit your review. Please try again.')
+        setError(authErrorMessage(err, 'Could not submit your review. Please try again.'))
       }
     } finally {
       setSubmitting(false)
@@ -56,24 +60,21 @@ export default function ReviewForm({ packageId, onSubmitted }: ReviewFormProps) 
         <StarRating value={rating} onChange={setRating} />
       </div>
 
-      <div className="form-row">
-        <label htmlFor="review-comment">Comment</label>
-        <textarea
-          id="review-comment"
-          rows={4}
-          maxLength={1000}
-          value={comment}
-          onChange={(event) => setComment(event.target.value)}
-          placeholder="Tell other travelers what stood out."
-        />
-        <span className="field-hint">{comment.length}/1000 characters</span>
-      </div>
+      <Textarea
+        id="review-comment"
+        label="Comment"
+        rows={4}
+        maxLength={1000}
+        value={comment}
+        onChange={(event) => setComment(event.target.value)}
+        placeholder="Tell other travelers what stood out."
+        hint={`${comment.length}/1000 characters`}
+      />
 
       <FormActions align="start">
-        <button type="submit" className="btn-cta icon-text" disabled={submitting}>
-          <Send size={17} aria-hidden />
-          {submitting ? 'Submitting...' : 'Post review'}
-        </button>
+        <Button type="submit" variant="cta" icon={<Send size={17} aria-hidden />} loading={submitting}>
+          Post review
+        </Button>
       </FormActions>
     </form>
   )

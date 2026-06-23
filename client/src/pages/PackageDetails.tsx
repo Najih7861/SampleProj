@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, CalendarDays, CheckCircle2, Loader2, LogIn, MapPin, UsersRound } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { ArrowLeft, CalendarDays, CheckCircle2, LogIn, MapPin, UsersRound } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import { getPackage } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import BookingForm from '../components/BookingForm'
 import PackageReviews from '../components/reviews/PackageReviews'
-import DataState from '../components/ui/DataState'
+import ErrorMessage from '../components/ui/ErrorMessage'
 import StatusBadge from '../components/ui/StatusBadge'
-import type { Package } from '../types'
+import Skeleton, { SkeletonText } from '../components/ui/Skeleton'
+import { LinkButton } from '../components/ui/Button'
+import { useAsync } from '../hooks/useAsync'
+import { formatCurrency } from '../lib/format'
 
 const FALLBACK_IMG =
   'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1400'
@@ -15,34 +18,14 @@ const FALLBACK_IMG =
 export default function PackageDetails() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
-  const [pkg, setPkg] = useState<Package | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [booked, setBooked] = useState(false)
   const packageId = Number(id)
 
-  useEffect(() => {
-    let active = true
-
-    async function loadPackage() {
-      try {
-        const data = await getPackage(packageId)
-        if (!active) return
-        setPkg(data)
-        setBooked(false)
-        setError(null)
-      } catch {
-        if (!active) return
-        setPkg(null)
-        setError('Tour package not found.')
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-
-    void loadPackage()
-    return () => { active = false }
-  }, [packageId])
+  const { data: pkg, loading, error } = useAsync(
+    () => getPackage(packageId),
+    [packageId],
+    { errorMessage: 'Tour package not found.' },
+  )
 
   const detailFacts = useMemo(() => {
     if (!pkg) return []
@@ -53,12 +36,20 @@ export default function PackageDetails() {
     ]
   }, [pkg])
 
-  const stalePackage = pkg != null && pkg.id !== packageId
-  if (loading || stalePackage) {
+  if (loading || (!pkg && !error)) {
     return (
-      <div className="page">
+      <div className="page detail-page">
         <div className="container">
-          <DataState icon={<Loader2 className="spin" size={28} />} message="Loading tour..." />
+          <section className="detail-shell">
+            <div className="detail-media">
+              <Skeleton width="100%" height="320px" radius="18px" />
+            </div>
+            <div className="detail-content">
+              <div className="detail-main">
+                <SkeletonText lines={4} />
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     )
@@ -68,11 +59,10 @@ export default function PackageDetails() {
     return (
       <div className="page">
         <div className="container">
-          <DataState
-            tone="error"
+          <ErrorMessage
             title="Tour unavailable"
             message={error ?? 'Not found'}
-            action={<Link to="/explore" className="btn-primary icon-text"><ArrowLeft size={17} /> Back to tours</Link>}
+            action={<LinkButton to="/explore" icon={<ArrowLeft size={17} />}>Back to tours</LinkButton>}
           />
         </div>
       </div>
@@ -112,7 +102,7 @@ export default function PackageDetails() {
               </div>
 
               <div className="detail-price-row">
-                <span className="price">${pkg.price.toLocaleString()}</span>
+                <span className="price">{formatCurrency(pkg.price)}</span>
                 <span className="muted">per booking request</span>
               </div>
             </div>

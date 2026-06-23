@@ -1,49 +1,44 @@
-import { useEffect, useState } from 'react'
-import { Edit3, Image, Loader2, MapPinned, Plus, Trash2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Edit3, Image, MapPinned, Plus, Search, Trash2 } from 'lucide-react'
 import { createPlace, deletePlace, getPlaces, updatePlace } from '../api/places'
+import { authErrorMessage } from '../api/auth'
+import { useAsync } from '../hooks/useAsync'
+import { useDebounce } from '../hooks/useDebounce'
+import { useToast } from '../components/ui/toast/useToast'
 import PlaceForm from '../components/PlaceForm'
-import DataState from '../components/ui/DataState'
 import Modal from '../components/ui/Modal'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
+import PageHeader from '../components/ui/PageHeader'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Spinner from '../components/ui/Spinner'
+import EmptyState from '../components/ui/EmptyState'
+import ErrorMessage from '../components/ui/ErrorMessage'
 import type { Place, PlaceInput } from '../types'
 
 export default function ManagePlaces() {
-  const [places, setPlaces] = useState<Place[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, loading, error, reload } = useAsync(
+    () => getPlaces(),
+    [],
+    { errorMessage: 'Could not load places. Is the API running?' },
+  )
+  const toast = useToast()
+
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<Place | undefined>(undefined)
+  const [pendingDelete, setPendingDelete] = useState<Place | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
-  async function load(busy = true) {
-    if (busy) setLoading(true)
-    setError(null)
-    try {
-      setPlaces(await getPlaces())
-    } catch {
-      setError('Could not load places. Is the API running?')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search)
 
-  useEffect(() => {
-    let active = true
+  const allPlaces = useMemo(() => data ?? [], [data])
 
-    async function loadPlaces() {
-      try {
-        const data = await getPlaces()
-        if (!active) return
-        setPlaces(data)
-        setError(null)
-      } catch {
-        if (active) setError('Could not load places. Is the API running?')
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-
-    void loadPlaces()
-    return () => { active = false }
-  }, [])
+  const visible = useMemo(() => {
+    const term = debouncedSearch.trim().toLowerCase()
+    if (!term) return allPlaces
+    return allPlaces.filter((place) => place.name.toLowerCase().includes(term))
+  }, [allPlaces, debouncedSearch])
 
   function openCreate() {
     setEditing(undefined)
@@ -56,43 +51,104 @@ export default function ManagePlaces() {
   }
 
   async function handleSubmit(input: PlaceInput) {
-    if (editing) {
-      await updatePlace(editing.id, input)
-    } else {
-      await createPlace(input)
+    try {
+      if (editing) {
+        await updatePlace(editing.id, input)
+        toast.success('Place updated')
+      } else {
+        await createPlace(input)
+        toast.success('Place created')
+      }
+      setShowForm(false)
+      reload()
+    } catch (err) {
+      toast.error(authErrorMessage(err, 'Could not save place.'))
     }
-    setShowForm(false)
-    await load()
   }
 
-  async function handleDelete(place: Place) {
-    if (!window.confirm(`Delete "${place.name}"? Its packages will be unlinked (not deleted).`)) return
-    await deletePlace(place.id)
-    await load()
+  async function confirmDelete() {
+    if (!pendingDelete) return
+    setDeleting(true)
+    try {
+      await deletePlace(pendingDelete.id)
+      toast.success('Place deleted')
+      setPendingDelete(null)
+      reload()
+    } catch (err) {
+      toast.error(authErrorMessage(err, 'Could not delete place.'))
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
     <div className="page">
       <div className="container">
-        <div className="toolbar">
-          <div>
-            <p className="eyebrow">Admin</p>
-            <h1>Manage Places</h1>
-          </div>
-          <button className="btn-primary icon-text" onClick={openCreate}>
-            <Plus size={17} aria-hidden />
-            New Place
-          </button>
-        </div>
+        <PageHeader
+          eyebrow="Admin"
+          title="Manage Places"
+          actions={
+            <Button icon={<Plus size={17} aria-hidden />} onClick={openCreate}>
+              New Place
+            </Button>
+          }
+        />
 
-        {loading && (
-          <DataState icon={<Loader2 className="spin" size={28} />} message="Loading places..." />
+        {!loading && !error && allPlaces.length > 0 && (
+          <>
+            <div className="admin-controls">
+              <div className="input-with-icon field field-search">
+                <Search size={16} aria-hidden />
+                <Input
+                  layout="field"
+                  type="search"
+                  placeholder="Search by name"
+                  aria-label="Search places"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </div>
+            </div>
+            <p className="result-count">
+              Showing {visible.length} of {allPlaces.length} places
+            </p>
+          </>
         )}
+
+        {loading && <Spinner label="Loading places..." />}
+
         {error && (
-          <DataState tone="error" title="Places unavailable" message={error} />
+          <ErrorMessage
+            title="Places unavailable"
+            message={error}
+            action={
+              <Button variant="ghost" onClick={reload}>
+                Retry
+              </Button>
+            }
+          />
         )}
 
-        {!loading && !error && (
+        {!loading && !error && allPlaces.length === 0 && (
+          <EmptyState
+            title="No places yet"
+            message="Add your first destination to start grouping tour packages."
+            action={
+              <Button icon={<Plus size={17} aria-hidden />} onClick={openCreate}>
+                New Place
+              </Button>
+            }
+          />
+        )}
+
+        {!loading && !error && allPlaces.length > 0 && visible.length === 0 && (
+          <EmptyState
+            title="No matching places"
+            message="No places match your search. Try a different name."
+          />
+        )}
+
+        {!loading && !error && visible.length > 0 && (
           <div className="table-wrap">
             <table className="responsive-table">
               <thead>
@@ -104,7 +160,7 @@ export default function ManagePlaces() {
                 </tr>
               </thead>
               <tbody>
-                {places.map((place) => (
+                {visible.map((place) => (
                   <tr key={place.id}>
                     <td data-label="Place">
                       <div className="record-title"><MapPinned size={16} aria-hidden /> {place.name}</div>
@@ -115,20 +171,25 @@ export default function ManagePlaces() {
                     <td data-label="Photos"><span className="icon-text"><Image size={16} aria-hidden /> {place.images.length}</span></td>
                     <td data-label="Tours">{place.packages.length}</td>
                     <td data-label="Actions" className="cell-actions">
-                      <button className="btn-ghost btn-sm icon-text" onClick={() => openEdit(place)}>
-                        <Edit3 size={15} aria-hidden />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Edit3 size={15} aria-hidden />}
+                        onClick={() => openEdit(place)}
+                      >
                         Edit
-                      </button>
-                      <button className="btn-danger btn-sm icon-text" onClick={() => handleDelete(place)}>
-                        <Trash2 size={15} aria-hidden />
+                      </Button>
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        icon={<Trash2 size={15} aria-hidden />}
+                        onClick={() => setPendingDelete(place)}
+                      >
                         Delete
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
-                {places.length === 0 && (
-                  <tr><td colSpan={4}><span className="muted">No places yet.</span></td></tr>
-                )}
               </tbody>
             </table>
           </div>
@@ -144,6 +205,17 @@ export default function ManagePlaces() {
           />
         </Modal>
       )}
+
+      <ConfirmDialog
+        open={!!pendingDelete}
+        title="Delete place"
+        tone="danger"
+        confirmLabel="Delete"
+        loading={deleting}
+        message={`Delete "${pendingDelete?.name}"? Its packages will be unlinked (not deleted).`}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   )
 }

@@ -1,7 +1,12 @@
 import { useState } from 'react'
-import { ArrowLeft, ArrowRight, Link as LinkIcon, Save, Trash2, Upload } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Plus, Save, Trash2, Upload } from 'lucide-react'
 import { uploadImage } from '../api/uploads'
+import { useForm } from '../hooks/useForm'
+import { required } from '../lib/validators'
+import Button from './ui/Button'
 import FormActions from './ui/FormActions'
+import Input from './ui/Input'
+import Textarea from './ui/Textarea'
 import type { Place, PlaceInput } from '../types'
 
 interface Props {
@@ -10,18 +15,32 @@ interface Props {
   onCancel: () => void
 }
 
+interface PlaceFormValues {
+  name: string
+  description: string
+}
+
 export default function PlaceForm({ initial, onSubmit, onCancel }: Props) {
-  const [name, setName] = useState(initial?.name ?? '')
-  const [description, setDescription] = useState(initial?.description ?? '')
   const [imageUrls, setImageUrls] = useState<string[]>(initial?.images ?? [])
+  const [urlInput, setUrlInput] = useState('')
   const [uploading, setUploading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [photoError, setPhotoError] = useState<string | null>(null)
+
+  const form = useForm<PlaceFormValues>(
+    {
+      name: initial?.name ?? '',
+      description: initial?.description ?? '',
+    },
+    {
+      name: required(),
+    },
+  )
 
   async function handleFiles(event: React.ChangeEvent<HTMLInputElement>) {
     const files = event.target.files
     if (!files || files.length === 0) return
-    setError(null)
+    setUploadError(null)
     setUploading(true)
     try {
       const uploaded: string[] = []
@@ -30,7 +49,7 @@ export default function PlaceForm({ initial, onSubmit, onCancel }: Props) {
       }
       setImageUrls((prev) => [...prev, ...uploaded])
     } catch {
-      setError('Could not upload one or more images. Please try again.')
+      setUploadError('Could not upload one or more images. Please try again.')
     } finally {
       setUploading(false)
       event.target.value = ''
@@ -38,8 +57,10 @@ export default function PlaceForm({ initial, onSubmit, onCancel }: Props) {
   }
 
   function addByUrl() {
-    const url = window.prompt('Paste an image URL')
-    if (url && url.trim()) setImageUrls((prev) => [...prev, url.trim()])
+    const url = urlInput.trim()
+    if (!url) return
+    setImageUrls((prev) => [...prev, url])
+    setUrlInput('')
   }
 
   function removeAt(index: number) {
@@ -56,45 +77,40 @@ export default function PlaceForm({ initial, onSubmit, onCancel }: Props) {
     })
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    setError(null)
+  const handleSubmit = form.handleSubmit(async (values) => {
+    setPhotoError(null)
     if (imageUrls.length < 5) {
-      setError('Please add at least 5 photos for the slideshow.')
+      setPhotoError('Please add at least 5 photos for the slideshow.')
       return
     }
-    setSaving(true)
-    try {
-      await onSubmit({ name, description, imageUrls })
-    } catch {
-      setError('Could not save the place. Please try again.')
-      setSaving(false)
-    }
-  }
+    await onSubmit({ name: values.name, description: values.description, imageUrls })
+  })
 
   return (
     <form onSubmit={handleSubmit}>
-      {error && <div className="notice notice-error">{error}</div>}
+      {form.submitError && <p className="notice notice-error">{form.submitError}</p>}
+      {uploadError && <p className="notice notice-error">{uploadError}</p>}
+      {photoError && <p className="notice notice-error">{photoError}</p>}
 
-      <div className="form-row">
-        <label htmlFor="place-name">Name</label>
-        <input
-          id="place-name"
-          required
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder="Bali, Indonesia"
-        />
-      </div>
-      <div className="form-row">
-        <label htmlFor="place-desc">Detailed description</label>
-        <textarea
-          id="place-desc"
-          rows={4}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-        />
-      </div>
+      <Input
+        id="place-name"
+        label="Name"
+        required
+        value={form.values.name}
+        onChange={(event) => form.setField('name', event.target.value)}
+        onBlur={() => form.handleBlur('name')}
+        error={form.errors.name}
+        placeholder="Bali, Indonesia"
+      />
+      <Textarea
+        id="place-desc"
+        label="Detailed description"
+        rows={4}
+        value={form.values.description}
+        onChange={(event) => form.setField('description', event.target.value)}
+        onBlur={() => form.handleBlur('description')}
+        error={form.errors.description}
+      />
 
       <div className="form-row">
         <label>Gallery photos ({imageUrls.length}) - at least 5</label>
@@ -122,19 +138,35 @@ export default function PlaceForm({ initial, onSubmit, onCancel }: Props) {
             {uploading ? 'Uploading...' : 'Upload photos'}
             <input type="file" accept="image/*" multiple hidden onChange={handleFiles} disabled={uploading} />
           </label>
-          <button type="button" className="btn-ghost btn-sm icon-text" onClick={addByUrl}>
-            <LinkIcon size={15} aria-hidden />
-            Add by URL
-          </button>
+        </div>
+        <div className="cover-input-row">
+          <input
+            value={urlInput}
+            onChange={(event) => setUrlInput(event.target.value)}
+            placeholder="Paste an image URL"
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Plus size={15} aria-hidden />}
+            onClick={addByUrl}
+          >
+            Add
+          </Button>
         </div>
       </div>
 
       <FormActions>
-        <button type="button" className="btn-ghost" onClick={onCancel} disabled={saving}>Cancel</button>
-        <button type="submit" className="btn-primary icon-text" disabled={saving || uploading}>
-          <Save size={16} aria-hidden />
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+        <Button variant="ghost" onClick={onCancel} disabled={form.submitting}>Cancel</Button>
+        <Button
+          type="submit"
+          variant="primary"
+          icon={<Save size={16} aria-hidden />}
+          loading={form.submitting}
+          disabled={uploading}
+        >
+          Save
+        </Button>
       </FormActions>
     </form>
   )

@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react'
 import { ImageUp, Link as LinkIcon, Save } from 'lucide-react'
 import { getPlaces } from '../api/places'
 import { uploadImage } from '../api/uploads'
+import { useForm } from '../hooks/useForm'
+import { numberRange, required } from '../lib/validators'
+import Button from './ui/Button'
 import FormActions from './ui/FormActions'
+import Input from './ui/Input'
+import Select from './ui/Select'
+import Spinner from './ui/Spinner'
+import Textarea from './ui/Textarea'
 import type { Package, PackageInput, Place } from '../types'
 
 interface Props {
@@ -11,19 +18,37 @@ interface Props {
   onCancel: () => void
 }
 
+interface PackageFormValues {
+  title: string
+  destination: string
+  description: string
+  price: number
+  durationDays: number
+}
+
 export default function PackageForm({ initial, onSubmit, onCancel }: Props) {
-  const [title, setTitle] = useState(initial?.title ?? '')
-  const [destination, setDestination] = useState(initial?.destination ?? '')
-  const [description, setDescription] = useState(initial?.description ?? '')
-  const [price, setPrice] = useState(initial?.price ?? 0)
-  const [durationDays, setDurationDays] = useState(initial?.durationDays ?? 1)
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? '')
   const [isAvailable, setIsAvailable] = useState(initial?.isAvailable ?? true)
   const [placeId, setPlaceId] = useState<string>(initial?.placeId != null ? String(initial.placeId) : '')
   const [places, setPlaces] = useState<Place[]>([])
   const [uploading, setUploading] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const form = useForm<PackageFormValues>(
+    {
+      title: initial?.title ?? '',
+      destination: initial?.destination ?? '',
+      description: initial?.description ?? '',
+      price: initial?.price ?? 0,
+      durationDays: initial?.durationDays ?? 1,
+    },
+    {
+      title: required(),
+      destination: required(),
+      price: numberRange(0, 1000000, 'Price must be 0 or more'),
+      durationDays: numberRange(1, 365),
+    },
+  )
 
   useEffect(() => {
     let active = true
@@ -44,90 +69,100 @@ export default function PackageForm({ initial, onSubmit, onCancel }: Props) {
   async function handleCover(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
-    setError(null)
+    setUploadError(null)
     setUploading(true)
     try {
       setImageUrl(await uploadImage(file))
     } catch {
-      setError('Could not upload the cover image.')
+      setUploadError('Could not upload the cover image.')
     } finally {
       setUploading(false)
       event.target.value = ''
     }
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault()
-    setError(null)
-    setSaving(true)
-    try {
-      await onSubmit({
-        title,
-        destination,
-        description,
-        price,
-        durationDays,
-        imageUrl: imageUrl || null,
-        isAvailable,
-        placeId: placeId ? Number(placeId) : null,
-      })
-    } catch {
-      setError('Could not save the package. Please try again.')
-      setSaving(false)
-    }
-  }
+  const handleSubmit = form.handleSubmit(async (values) => {
+    await onSubmit({
+      title: values.title,
+      destination: values.destination,
+      description: values.description,
+      price: values.price,
+      durationDays: values.durationDays,
+      imageUrl: imageUrl || null,
+      isAvailable,
+      placeId: placeId ? Number(placeId) : null,
+    })
+  })
 
   return (
     <form onSubmit={handleSubmit}>
-      {error && <div className="notice notice-error">{error}</div>}
+      {form.submitError && <p className="notice notice-error">{form.submitError}</p>}
+      {uploadError && <p className="notice notice-error">{uploadError}</p>}
 
-      <div className="form-row">
-        <label htmlFor="title">Title</label>
-        <input id="title" required value={title} onChange={(event) => setTitle(event.target.value)} />
-      </div>
-      <div className="form-row">
-        <label htmlFor="dest">Destination</label>
-        <input id="dest" required value={destination} onChange={(event) => setDestination(event.target.value)} />
-      </div>
-      <div className="form-row">
-        <label htmlFor="desc">Description</label>
-        <textarea id="desc" rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
-      </div>
+      <Input
+        id="title"
+        label="Title"
+        required
+        value={form.values.title}
+        onChange={(event) => form.setField('title', event.target.value)}
+        onBlur={() => form.handleBlur('title')}
+        error={form.errors.title}
+      />
+      <Input
+        id="dest"
+        label="Destination"
+        required
+        value={form.values.destination}
+        onChange={(event) => form.setField('destination', event.target.value)}
+        onBlur={() => form.handleBlur('destination')}
+        error={form.errors.destination}
+      />
+      <Textarea
+        id="desc"
+        label="Description"
+        rows={3}
+        value={form.values.description}
+        onChange={(event) => form.setField('description', event.target.value)}
+        onBlur={() => form.handleBlur('description')}
+        error={form.errors.description}
+      />
       <div className="form-grid">
-        <div className="form-row">
-          <label htmlFor="price">Price (USD)</label>
-          <input
-            id="price"
-            type="number"
-            min={0}
-            step="0.01"
-            required
-            value={price}
-            onChange={(event) => setPrice(Number(event.target.value))}
-          />
-        </div>
-        <div className="form-row">
-          <label htmlFor="duration">Duration (days)</label>
-          <input
-            id="duration"
-            type="number"
-            min={1}
-            max={365}
-            required
-            value={durationDays}
-            onChange={(event) => setDurationDays(Number(event.target.value))}
-          />
-        </div>
+        <Input
+          id="price"
+          label="Price (USD)"
+          type="number"
+          min={0}
+          step="0.01"
+          required
+          value={form.values.price}
+          onChange={(event) => form.setField('price', Number(event.target.value))}
+          onBlur={() => form.handleBlur('price')}
+          error={form.errors.price}
+        />
+        <Input
+          id="duration"
+          label="Duration (days)"
+          type="number"
+          min={1}
+          max={365}
+          required
+          value={form.values.durationDays}
+          onChange={(event) => form.setField('durationDays', Number(event.target.value))}
+          onBlur={() => form.handleBlur('durationDays')}
+          error={form.errors.durationDays}
+        />
       </div>
-      <div className="form-row">
-        <label htmlFor="place">Place</label>
-        <select id="place" value={placeId} onChange={(event) => setPlaceId(event.target.value)}>
-          <option value="">None</option>
-          {places.map((place) => (
-            <option key={place.id} value={place.id}>{place.name}</option>
-          ))}
-        </select>
-      </div>
+      <Select
+        id="place"
+        label="Place"
+        value={placeId}
+        onChange={(event) => setPlaceId(event.target.value)}
+      >
+        <option value="">None</option>
+        {places.map((place) => (
+          <option key={place.id} value={place.id}>{place.name}</option>
+        ))}
+      </Select>
       <div className="form-row">
         <label htmlFor="img">Cover image</label>
         <div className="cover-input-row">
@@ -145,6 +180,7 @@ export default function PackageForm({ initial, onSubmit, onCancel }: Props) {
             {uploading ? 'Uploading...' : 'Upload photo'}
             <input type="file" accept="image/*" hidden onChange={handleCover} disabled={uploading} />
           </label>
+          {uploading && <Spinner size={16} label="Uploading" />}
           <span className="field-hint icon-text"><LinkIcon size={14} aria-hidden /> Direct image URLs are supported.</span>
         </div>
       </div>
@@ -159,11 +195,16 @@ export default function PackageForm({ initial, onSubmit, onCancel }: Props) {
       </div>
 
       <FormActions>
-        <button type="button" className="btn-ghost" onClick={onCancel} disabled={saving}>Cancel</button>
-        <button type="submit" className="btn-primary icon-text" disabled={saving || uploading}>
-          <Save size={16} aria-hidden />
-          {saving ? 'Saving...' : 'Save'}
-        </button>
+        <Button variant="ghost" onClick={onCancel} disabled={form.submitting}>Cancel</Button>
+        <Button
+          type="submit"
+          variant="primary"
+          icon={<Save size={16} aria-hidden />}
+          loading={form.submitting}
+          disabled={uploading}
+        >
+          Save
+        </Button>
       </FormActions>
     </form>
   )

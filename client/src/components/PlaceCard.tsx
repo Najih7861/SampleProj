@@ -1,6 +1,7 @@
 import { ArrowRight, Camera, Compass, MapPin } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import PlaceSlideshow from './PlaceSlideshow'
+import { formatCurrency } from '../lib/format'
 import type { Place } from '../types'
 
 function fromPrice(place: Place) {
@@ -30,7 +31,7 @@ export default function PlaceCard({ place }: { place: Place }) {
 
         <div className="place-card-summary">
           <span><Compass size={16} aria-hidden /> {place.packages.length} tour{place.packages.length === 1 ? '' : 's'}</span>
-          {lowestPrice != null && <span>From ${lowestPrice.toLocaleString()}</span>}
+          {lowestPrice != null && <span>From {formatCurrency(lowestPrice)}</span>}
         </div>
 
         <div className="place-card-footer">

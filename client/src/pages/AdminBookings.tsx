@@ -1,106 +1,150 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Loader2, MapPin, ShieldCheck, XCircle } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { MapPin, Search, ShieldCheck, XCircle } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { getBookings, updateBookingStatus } from '../api/client'
-import DataState from '../components/ui/DataState'
+import { authErrorMessage } from '../api/auth'
+import { useAsync } from '../hooks/useAsync'
+import { useDebounce } from '../hooks/useDebounce'
+import { formatDate } from '../lib/format'
+import { useToast } from '../components/ui/toast/useToast'
 import StatusBadge from '../components/ui/StatusBadge'
+import ConfirmDialog from '../components/ui/ConfirmDialog'
+import PageHeader from '../components/ui/PageHeader'
+import Button from '../components/ui/Button'
+import Input from '../components/ui/Input'
+import Select from '../components/ui/Select'
+import Spinner from '../components/ui/Spinner'
+import EmptyState from '../components/ui/EmptyState'
+import ErrorMessage from '../components/ui/ErrorMessage'
 import type { Booking, BookingStatus } from '../types'
 
 const STATUSES: BookingStatus[] = ['Pending', 'Confirmed', 'Cancelled']
 
+const FILTER_OPTIONS = [
+  { value: '', label: 'All' },
+  ...STATUSES.map((status) => ({ value: status, label: status })),
+]
+
+const STATUS_OPTIONS = STATUSES.map((status) => ({ value: status, label: status }))
+
+function isBookingStatus(value: string): value is BookingStatus {
+  return STATUSES.includes(value as BookingStatus)
+}
+
 export default function AdminBookings() {
-  const [bookings, setBookings] = useState<Booking[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<BookingStatus | ''>('')
+  const [searchParams] = useSearchParams()
+  const initialStatus = searchParams.get('status')
+  const [filter, setFilter] = useState<BookingStatus | ''>(
+    initialStatus && isBookingStatus(initialStatus) ? initialStatus : '',
+  )
 
-  async function load(status: BookingStatus | '' = filter, busy = true) {
-    if (busy) setLoading(true)
-    setError(null)
-    try {
-      setBookings(await getBookings(status || undefined))
-    } catch {
-      setError('Could not load bookings. Is the API running?')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { data, loading, error, reload } = useAsync(
+    () => getBookings(filter || undefined),
+    [filter],
+    { errorMessage: 'Could not load bookings. Is the API running?' },
+  )
+  const toast = useToast()
 
-  useEffect(() => {
-    let active = true
+  const [search, setSearch] = useState('')
+  const debouncedSearch = useDebounce(search)
 
-    async function loadBookings() {
-      try {
-        const data = await getBookings(filter || undefined)
-        if (!active) return
-        setBookings(data)
-        setError(null)
-      } catch {
-        if (active) setError('Could not load bookings. Is the API running?')
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
+  const [pendingCancel, setPendingCancel] = useState<Booking | null>(null)
+  const [cancelling, setCancelling] = useState(false)
 
-    void loadBookings()
-    return () => { active = false }
-  }, [filter])
-
-  function handleFilterChange(status: BookingStatus | '') {
-    setLoading(true)
-    setFilter(status)
-  }
-
-  async function handleStatusChange(booking: Booking, status: BookingStatus) {
-    await updateBookingStatus(booking.id, status)
-    await load(filter)
-  }
-
-  async function handleCancel(booking: Booking) {
-    if (!window.confirm(`Cancel ${booking.customerName}'s booking for "${booking.packageTitle}"?`)) return
-    await updateBookingStatus(booking.id, 'Cancelled')
-    await load(filter)
-  }
+  const bookings = useMemo(() => data ?? [], [data])
 
   const groups = useMemo(() => {
+    const term = debouncedSearch.trim().toLowerCase()
+    const filtered = term
+      ? bookings.filter((booking) => {
+          const haystack = `${booking.customerName} ${booking.email} ${booking.packageTitle}`.toLowerCase()
+          return haystack.includes(term)
+        })
+      : bookings
     const map = new Map<string, Booking[]>()
-    for (const booking of bookings) {
+    for (const booking of filtered) {
       const key = booking.packageDestination || 'Unspecified place'
       const list = map.get(key)
       if (list) list.push(booking)
       else map.set(key, [booking])
     }
     return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]))
-  }, [bookings])
+  }, [bookings, debouncedSearch])
+
+  async function handleStatusChange(booking: Booking, status: BookingStatus) {
+    try {
+      await updateBookingStatus(booking.id, status)
+      toast.success(`Booking marked ${status}`)
+      reload()
+    } catch (err) {
+      toast.error(authErrorMessage(err, 'Could not update booking status.'))
+    }
+  }
+
+  async function confirmCancel() {
+    if (!pendingCancel) return
+    setCancelling(true)
+    try {
+      await updateBookingStatus(pendingCancel.id, 'Cancelled')
+      toast.success('Booking cancelled')
+      setPendingCancel(null)
+      reload()
+    } catch (err) {
+      toast.error(authErrorMessage(err, 'Could not cancel booking.'))
+    } finally {
+      setCancelling(false)
+    }
+  }
+
+  const hasResults = groups.length > 0
 
   return (
     <div className="page">
       <div className="container">
-        <div className="toolbar">
-          <div>
-            <p className="eyebrow">Admin</p>
-            <h1>Bookings</h1>
-          </div>
-          <div className="field toolbar-field">
-            <label htmlFor="status-filter"><ShieldCheck size={15} aria-hidden /> Filter by status</label>
-            <select
-              id="status-filter"
-              value={filter}
-              onChange={(event) => handleFilterChange(event.target.value as BookingStatus | '')}
-            >
-              <option value="">All</option>
-              {STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
-            </select>
-          </div>
-        </div>
+        <PageHeader eyebrow="Admin" title="Bookings" />
 
-        {loading && (
-          <DataState icon={<Loader2 className="spin" size={28} />} message="Loading bookings..." />
+        {!loading && !error && (
+          <div className="admin-controls">
+            <div className="input-with-icon field field-search">
+              <Search size={16} aria-hidden />
+              <Input
+                layout="field"
+                type="search"
+                placeholder="Search by customer, email, or tour"
+                aria-label="Search bookings"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </div>
+            <Select
+              layout="field"
+              label={<><ShieldCheck size={15} aria-hidden /> Filter by status</>}
+              value={filter}
+              onChange={(event) => setFilter(event.target.value as BookingStatus | '')}
+              options={FILTER_OPTIONS}
+            />
+          </div>
         )}
+
+        {loading && <Spinner label="Loading bookings..." />}
+
         {error && (
-          <DataState tone="error" title="Bookings unavailable" message={error} />
+          <ErrorMessage
+            title="Bookings unavailable"
+            message={error}
+            action={
+              <Button variant="ghost" onClick={reload}>
+                Retry
+              </Button>
+            }
+          />
         )}
-        {!loading && !error && bookings.length === 0 && (
-          <DataState title="No bookings found" message="Bookings will appear here after customers reserve tours." />
+
+        {!loading && !error && !hasResults && (
+          <EmptyState
+            title="No bookings found"
+            message="Bookings will appear here after customers reserve tours."
+          />
         )}
 
         {!loading && !error && groups.map(([place, placeBookings]) => (
@@ -131,26 +175,28 @@ export default function AdminBookings() {
                         <span className="record-note">{booking.email}</span>
                       </td>
                       <td data-label="Tour">{booking.packageTitle}</td>
-                      <td data-label="Travel date">{new Date(booking.travelDate).toLocaleDateString()}</td>
+                      <td data-label="Travel date">{formatDate(booking.travelDate)}</td>
                       <td data-label="Travelers">{booking.numberOfTravelers}</td>
                       <td data-label="Status"><StatusBadge status={booking.status} /></td>
                       <td data-label="Set status">
-                        <select
+                        <Select
+                          layout="field"
+                          aria-label={`Set status for ${booking.customerName}`}
                           value={booking.status}
                           onChange={(event) => handleStatusChange(booking, event.target.value as BookingStatus)}
-                        >
-                          {STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
-                        </select>
+                          options={STATUS_OPTIONS}
+                        />
                       </td>
                       <td data-label="Actions" className="cell-actions">
-                        <button
-                          className="btn-danger btn-sm icon-text"
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          icon={<XCircle size={15} aria-hidden />}
                           disabled={booking.status === 'Cancelled'}
-                          onClick={() => handleCancel(booking)}
+                          onClick={() => setPendingCancel(booking)}
                         >
-                          <XCircle size={15} aria-hidden />
                           Cancel
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -160,6 +206,22 @@ export default function AdminBookings() {
           </section>
         ))}
       </div>
+
+      <ConfirmDialog
+        open={!!pendingCancel}
+        title="Cancel booking"
+        tone="danger"
+        confirmLabel="Cancel booking"
+        cancelLabel="Keep booking"
+        loading={cancelling}
+        message={
+          pendingCancel
+            ? `Cancel ${pendingCancel.customerName}'s booking for "${pendingCancel.packageTitle}"?`
+            : ''
+        }
+        onConfirm={confirmCancel}
+        onCancel={() => setPendingCancel(null)}
+      />
     </div>
   )
 }

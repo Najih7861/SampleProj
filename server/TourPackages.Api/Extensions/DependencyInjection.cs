@@ -17,6 +17,7 @@ public static class DependencyInjection
         services.AddScoped<IPlaceRepository, PlaceRepository>();
         services.AddScoped<IReviewRepository, ReviewRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IAdminStatsRepository, AdminStatsRepository>();
 
         // Domain services (business rules).
         services.AddScoped<IBookingService, BookingService>();
@@ -25,6 +26,7 @@ public static class DependencyInjection
         services.AddScoped<IReviewService, ReviewService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUploadService, UploadService>();
+        services.AddScoped<IAdminStatsService, AdminStatsService>();
 
         return services;
     }

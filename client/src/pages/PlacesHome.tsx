@@ -1,39 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, Compass, Loader2, MapPinned, PlaneTakeoff } from 'lucide-react'
+import { useMemo } from 'react'
+import { ArrowRight, Compass, MapPinned, PlaneTakeoff } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { getPlaces } from '../api/places'
 import PlaceCard from '../components/PlaceCard'
-import DataState from '../components/ui/DataState'
+import EmptyState from '../components/ui/EmptyState'
+import ErrorMessage from '../components/ui/ErrorMessage'
 import PageHero from '../components/ui/PageHero'
-import type { Place } from '../types'
+import { SkeletonCard } from '../components/ui/Skeleton'
+import { useAsync } from '../hooks/useAsync'
 
 const FALLBACK_HERO =
   'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1800'
 
 export default function PlacesHome() {
-  const [places, setPlaces] = useState<Place[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let active = true
-
-    async function loadPlaces() {
-      try {
-        const data = await getPlaces()
-        if (!active) return
-        setPlaces(data)
-        setError(null)
-      } catch {
-        if (active) setError('Could not load destinations. Is the API running?')
-      } finally {
-        if (active) setLoading(false)
-      }
-    }
-
-    void loadPlaces()
-    return () => { active = false }
-  }, [])
+  const { data, loading, error, reload } = useAsync(() => getPlaces(), [])
+  const places = useMemo(() => data ?? [], [data])
 
   const heroImage = places.find((place) => place.images.length > 0)?.images[0] ?? FALLBACK_HERO
   const availableTours = useMemo(
@@ -74,20 +55,21 @@ export default function PlacesHome() {
           </div>
 
           {loading && (
-            <DataState
-              icon={<Loader2 className="spin" size={28} />}
-              message="Loading destinations..."
-            />
+            <div className="place-list">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
           )}
-          {error && (
-            <DataState
-              tone="error"
+          {!loading && error && (
+            <ErrorMessage
               title="Destinations unavailable"
               message={error}
+              action={<button className="btn-primary" onClick={reload}>Retry</button>}
             />
           )}
           {!loading && !error && places.length === 0 && (
-            <DataState
+            <EmptyState
               title="No destinations yet"
               message="Check back soon for new tour places."
             />
