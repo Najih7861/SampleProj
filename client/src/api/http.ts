@@ -6,7 +6,7 @@ import axios from 'axios'
 //
 // Auth state is persisted by AuthContext under this localStorage key as the
 // AuthUser object (which carries the token).
-const STORAGE_KEY = 'wanderlust.auth.user'
+export const STORAGE_KEY = 'wanderlust.auth.user'
 
 export function getStoredToken(): string | null {
   try {

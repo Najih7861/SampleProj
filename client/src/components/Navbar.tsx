@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarCheck, Compass, LayoutDashboard, LogOut, MapPinned, Menu, ShieldCheck, UserRound, X } from 'lucide-react'
+import { BarChart3, CalendarCheck, Compass, LayoutDashboard, LogOut, MapPinned, Menu, ShieldCheck, UserRound, X } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
@@ -39,6 +39,7 @@ export default function Navbar() {
           {isAdmin ? (
             <>
               <NavLink to="/admin" end onClick={closeMenu}><LayoutDashboard size={17} /> Dashboard</NavLink>
+              <NavLink to="/admin/analytics" onClick={closeMenu}><BarChart3 size={17} /> Analytics</NavLink>
               <NavLink to="/admin/places" onClick={closeMenu}><MapPinned size={17} /> Places</NavLink>
               <NavLink to="/admin/packages" onClick={closeMenu}><Compass size={17} /> Packages</NavLink>
               <NavLink to="/admin/bookings" onClick={closeMenu}><ShieldCheck size={17} /> Bookings</NavLink>

@@ -1,0 +1,205 @@
+/* Styles for the admin Analytics dashboard. Scoped with the `analytics-` prefix
+   so they never collide with the shared utilities in index.css. */
+
+.analytics-meta {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  margin: 0 0 var(--space-4);
+}
+
+/* KPI cards ---------------------------------------------------------------- */
+.analytics-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+}
+
+.kpi-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpi-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.kpi-icon-danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-dark);
+}
+
+.kpi-value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: 1.1;
+}
+
+.kpi-label {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.kpi-hint {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.kpi-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+}
+
+.kpi-delta-up {
+  background: var(--color-success-soft);
+  color: var(--color-success-dark);
+}
+
+.kpi-delta-down {
+  background: var(--color-danger-soft);
+  color: var(--color-danger-dark);
+}
+
+.kpi-delta-flat {
+  background: var(--color-neutral-soft);
+  color: var(--color-neutral-ink);
+}
+
+/* Chart panels ------------------------------------------------------------- */
+.analytics-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+@media (max-width: 860px) {
+  .analytics-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-panel {
+  padding: var(--space-5);
+}
+
+.chart-panel-full {
+  margin-bottom: var(--space-5);
+}
+
+.chart-panel-head {
+  margin-bottom: var(--space-4);
+}
+
+.chart-panel-head h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 1.05rem;
+  margin: 0;
+  color: var(--color-ink);
+}
+
+.chart-panel-head .muted {
+  margin: var(--space-1) 0 0;
+  font-size: 0.82rem;
+}
+
+/* matplotlib charts arrive as PNG data URIs — scale them to the panel width. */
+.analytics-chart-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+}
+
+/* Insights ----------------------------------------------------------------- */
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.insight-card {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.insight-card-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.insight-card-title {
+  font-weight: 700;
+  color: var(--color-ink);
+  margin: 0 0 2px;
+}
+
+.insight-card-detail {
+  font-size: 0.86rem;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.insight-critical {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-soft);
+}
+.insight-critical .insight-card-icon {
+  color: var(--color-danger-dark);
+}
+
+.insight-warning {
+  border-color: var(--color-warm-soft);
+  background: var(--color-warm-soft);
+}
+.insight-warning .insight-card-icon {
+  color: var(--color-warm-ink);
+}
+
+.insight-info {
+  border-color: var(--color-primary-border);
+  background: var(--color-primary-soft);
+}
+.insight-info .insight-card-icon {
+  color: var(--color-primary-dark);
+}
+
+.insight-success {
+  border-color: var(--color-success-border);
+  background: var(--color-success-soft);
+}
+.insight-success .insight-card-icon {
+  color: var(--color-success-dark);
+}
+
+/* Numeric table cells ------------------------------------------------------ */
+.analytics-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

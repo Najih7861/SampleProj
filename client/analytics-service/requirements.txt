@@ -1,0 +1,9 @@
+# Wanderlust analytics microservice — Python dependencies.
+# Install:  pip install -r requirements.txt
+fastapi>=0.110
+uvicorn[standard]>=0.27
+SQLAlchemy>=2.0
+psycopg2-binary>=2.9
+PyJWT>=2.8
+python-dotenv>=1.0
+matplotlib>=3.8

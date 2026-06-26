@@ -17,6 +17,11 @@ export default defineConfig({
         target: 'http://localhost:5169',
         changeOrigin: true,
       },
+      // Analytics dashboard — Python FastAPI microservice (see client/analytics-service).
+      '/analytics': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+      },
     },
   },
 })
